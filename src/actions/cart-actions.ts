@@ -1,8 +1,8 @@
 "use server";
 
-import type { Cart } from "commerce-kit";
 import { clearCartId, getCartId, setCartId } from "@/lib/cart-cookies";
-import { commerce } from "@/lib/commerce";
+import { commerce } from "@/lib/commerce-stripe";
+import type { Cart } from "@/lib/commerce-types";
 
 export async function getCartAction(): Promise<Cart | null> {
 	const cartId = await getCartId();

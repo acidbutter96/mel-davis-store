@@ -1,7 +1,7 @@
 import type { Metadata } from "next/types";
 import { publicUrl } from "@/env.mjs";
 import { getTranslations } from "@/i18n/server";
-import { commerce } from "@/lib/commerce";
+import { commerce } from "@/lib/commerce-stripe";
 import { ProductList } from "@/ui/products/product-list";
 
 export const generateMetadata = async (): Promise<Metadata> => {

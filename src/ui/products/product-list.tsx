@@ -1,6 +1,6 @@
-import type { Product } from "commerce-kit";
 import Image from "next/image";
 import { getLocale } from "@/i18n/server";
+import type { Product } from "@/lib/commerce-types";
 import { formatMoney } from "@/lib/utils";
 import { JsonLd, mappedProductsToJsonLd } from "@/ui/json-ld";
 import { YnsLink } from "@/ui/yns-link";

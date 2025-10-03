@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
 		],
 		formats: ["image/avif", "image/webp"],
 	},
-	transpilePackages: ["next-mdx-remote", "commerce-kit"],
+	transpilePackages: ["next-mdx-remote"],
 	experimental: {
 		esmExternals: true,
 		scrollRestoration: true,

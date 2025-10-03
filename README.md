@@ -144,8 +144,12 @@ Additionally, Your Next Store uses product metadata to provide more context info
 | `category` |    No    | The product category used for grouping products.                                |
 | `order`    |    No    | The product order used for sorting products. Lower numbers are displayed first. |
 | `variant`  |    No    | The product variant slug. Read below for details.                               |
+| `stock`    |    No    | Integer quantity in stock. `0` marks product as out-of-stock. Omit for unlimited/unknown (will not display OOS badge). |
 
 Now you should see all added products in Your Next Store.
+
+> [!TIP]
+> If all produtos apareciam como "Out of stock": garanta que você só define `stock` quando quiser controlar o inventário. Remova o metadata ou deixe-o vazio para produtos com estoque "ilimitado" / não rastreado; use `stock=0` apenas quando realmente indisponível.
 
 ## Variants
 

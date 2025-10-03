@@ -1,6 +1,6 @@
-import type { Product as CommerceProduct } from "commerce-kit";
 import type { ItemList, Product, Thing, WebSite, WithContext } from "schema-dts";
 import type Stripe from "stripe";
+import type { Product as CommerceProduct } from "@/lib/commerce-types";
 
 export const JsonLd = <T extends Thing>({ jsonLd }: { jsonLd: WithContext<T> }) => {
 	return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />;
@@ -18,7 +18,12 @@ export const mappedProductToJsonLd = (product: CommerceProduct): WithContext<Pro
 			"@type": "Offer",
 			price: product.price.toString(),
 			priceCurrency: product.currency,
-			availability: (product.stock ?? 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+			availability:
+				product.stock === undefined || product.stock === null
+					? undefined // omit availability when unknown
+					: product.stock === 0
+						? "https://schema.org/OutOfStock"
+						: "https://schema.org/InStock",
 		},
 	};
 };

@@ -1,4 +1,4 @@
-import type { Product } from "commerce-kit";
+import type { Product } from "@/lib/commerce-types";
 
 const NO_MATCH = 0;
 const EXACT_MATCH = 5;

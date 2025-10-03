@@ -1,13 +1,21 @@
 "use client";
 
-import type { Cart, ProductInfo } from "commerce-kit";
-import { createContext, type ReactNode, useContext, useEffect, useOptimistic, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	startTransition,
+	useContext,
+	useEffect,
+	useOptimistic,
+	useState,
+} from "react";
 import {
 	addToCartAction,
 	getCartAction,
 	removeFromCartAction,
 	updateCartItemAction,
 } from "@/actions/cart-actions";
+import type { Cart, ProductInfo } from "@/lib/commerce-types";
 
 type CartAction =
 	| { type: "ADD_ITEM"; variantId: string; quantity: number; product?: ProductInfo }
@@ -140,22 +148,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 	// Load initial cart
 	useEffect(() => {
+		// Inicialização do carrinho dentro de startTransition para evitar warning de atualização otimista
 		getCartAction().then((cart) => {
-			setActualCart(cart);
+			startTransition(() => {
+				setActualCart(cart);
+			});
 		});
 	}, []);
 
 	// Sync optimistic cart with actual cart when it changes
 	useEffect(() => {
-		setOptimisticCart({ type: "SYNC_CART", cart: actualCart });
-	}, [actualCart, setOptimisticCart]);
+		if (actualCart === optimisticCart) return; // evita transições redundantes
+		startTransition(() => {
+			setOptimisticCart({ type: "SYNC_CART", cart: actualCart });
+		});
+	}, [actualCart, optimisticCart, setOptimisticCart]);
 
 	const openCart = () => setIsCartOpen(true);
 	const closeCart = () => setIsCartOpen(false);
 
 	const optimisticAdd = async (variantId: string, quantity = 1, product?: ProductInfo) => {
-		// Optimistically update UI
-		setOptimisticCart({ type: "ADD_ITEM", variantId, quantity, product });
+		// Optimistic update dentro de startTransition para cumprir regras do React 19
+		startTransition(() => {
+			setOptimisticCart({ type: "ADD_ITEM", variantId, quantity, product });
+		});
 
 		try {
 			// Perform server action
@@ -169,8 +185,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	};
 
 	const optimisticUpdate = async (variantId: string, quantity: number) => {
-		// Optimistically update UI
-		setOptimisticCart({ type: "UPDATE_ITEM", variantId, quantity });
+		startTransition(() => {
+			setOptimisticCart({ type: "UPDATE_ITEM", variantId, quantity });
+		});
 
 		try {
 			// Perform server action
@@ -184,8 +201,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	};
 
 	const optimisticRemove = async (variantId: string) => {
-		// Optimistically update UI
-		setOptimisticCart({ type: "REMOVE_ITEM", variantId });
+		startTransition(() => {
+			setOptimisticCart({ type: "REMOVE_ITEM", variantId });
+		});
 
 		try {
 			// Perform server action

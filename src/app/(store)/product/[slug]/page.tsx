@@ -1,6 +1,5 @@
 // import { ProductModel3D } from "@/app/(store)/product/[slug]/product-model3d";
 
-import type { YnsProduct } from "commerce-kit";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next/types";
@@ -17,7 +16,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { publicUrl } from "@/env.mjs";
 import { getLocale, getTranslations } from "@/i18n/server";
-import { commerce } from "@/lib/commerce";
+import { commerce } from "@/lib/commerce-stripe";
+import type { YnsProduct } from "@/lib/commerce-types";
 import { deslugify, formatMoney } from "@/lib/utils";
 import { JsonLd, mappedProductToJsonLd } from "@/ui/json-ld";
 import { Markdown } from "@/ui/markdown";
@@ -101,7 +101,7 @@ export default async function SingleProductPage(props: {
 							locale,
 						})}
 					</p>
-					<div className="mt-2">{(product.stock || 0) <= 0 && <div>Out of stock</div>}</div>
+					<div className="mt-2">{product.stock === 0 && <div>Out of stock</div>}</div>
 				</div>
 
 				<div className="lg:col-span-7 lg:row-span-3 lg:row-start-1">
@@ -152,9 +152,9 @@ export default async function SingleProductPage(props: {
 
 					<AddToCart
 						variantId={ynsProduct.variants[0]?.id || product.id}
-						className={(product.stock || 0) <= 0 ? "opacity-50 cursor-not-allowed" : ""}
+						className={product.stock === 0 ? "opacity-50 cursor-not-allowed" : ""}
 					>
-						{(product.stock || 0) <= 0 ? "Out of Stock" : "Add to Cart"}
+						{product.stock === 0 ? "Out of Stock" : "Add to Cart"}
 					</AddToCart>
 				</div>
 			</div>
