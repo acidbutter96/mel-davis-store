@@ -2,6 +2,8 @@
 
 import { Minus, Plus, ShoppingBag, X } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
+import { createCheckoutSession } from "@/actions/checkout-actions";
 import { useCart } from "@/context/cart-context";
 import { formatMoney } from "@/lib/utils";
 
@@ -28,6 +30,9 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 			// Error is already logged in context, could show toast here
 		}
 	}
+
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	if (!isOpen) return null;
 
@@ -155,8 +160,33 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 									})}
 								</span>
 							</div>
-							<button className="w-full rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800">
-								Checkout (Demo)
+							{error && (
+								<p className="text-sm text-red-600" role="alert">
+									{error}
+								</p>
+							)}
+							<button
+								onClick={async () => {
+									if (loading) return;
+									setError(null);
+									setLoading(true);
+									try {
+										const res = await createCheckoutSession();
+										if ("error" in res) {
+											setError(res.error);
+										} else if (res.url) {
+											window.location.href = res.url;
+										}
+									} catch (e) {
+										setError((e as Error).message);
+									} finally {
+										setLoading(false);
+									}
+								}}
+								disabled={loading || !cart || cart.items.length === 0}
+								className="w-full rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+							>
+								{loading ? "Criando sessão..." : "Checkout"}
 							</button>
 						</div>
 					)}

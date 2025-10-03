@@ -148,6 +148,22 @@ Additionally, Your Next Store uses product metadata to provide more context info
 
 Now you should see all added products in Your Next Store.
 
+### Checkout
+
+O botão de Checkout cria uma sessão Stripe Checkout usando os itens do carrinho (cada `variantId` é tratado como um `price id`).
+
+Pré-requisitos:
+- Definir `NEXT_PUBLIC_URL` corretamente (usado para `success_url` e `cancel_url`).
+- Produtos devem ter Prices ativos no Stripe; o `variantId` armazenado no carrinho corresponde ao `price.id` retornado.
+
+Fluxo:
+1. Usuário abre o carrinho e clica em Checkout.
+2. A server action `createCheckoutSession` cria a sessão no Stripe.
+3. O usuário é redirecionado para a página hospedada do Stripe.
+4. Ao concluir, Stripe redireciona para `/?checkout=success` (ou `cancel`).
+
+Se ocorrer erro (ex: price inválido), uma mensagem aparece no carrinho.
+
 > [!TIP]
 > If all produtos apareciam como "Out of stock": garanta que você só define `stock` quando quiser controlar o inventário. Remova o metadata ou deixe-o vazio para produtos com estoque "ilimitado" / não rastreado; use `stock=0` apenas quando realmente indisponível.
 
