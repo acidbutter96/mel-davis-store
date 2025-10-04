@@ -172,7 +172,9 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 									setLoading(true);
 									try {
 										const res = await createCheckoutSession();
-										if ("error" in res) {
+										if ("requireAuth" in res) {
+											window.location.href = "/login?next=checkout";
+										} else if ("error" in res) {
 											setError(res.error);
 										} else if (res.url) {
 											window.location.href = res.url;

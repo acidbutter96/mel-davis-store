@@ -118,6 +118,50 @@ https://github.com/yournextstore/.github/assets/200613/01d27f69-00dc-446e-bc81-5
 
 After following the above steps, run `bun install` to install the required dependencies, and then run `bun dev` to start the development server on your machine. Your Next Store will be available at [localhost:3000](http://localhost:3000)
 
+### (Opcional) Subir MongoDB com Docker Compose
+
+Se você não tem uma instância do MongoDB local, use o arquivo `docker-compose.yml` adicionado:
+
+```bash
+docker compose up -d mongo
+```
+
+Isso irá:
+- Baixar a imagem `mongo:7.0`
+- Criar um volume persistente `mongo_data`
+- Expor a porta `27017`
+- Rodar um healthcheck (ping)
+
+No seu `.env` local deixe (já existe em `.env.example`):
+
+```
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DB_NAME=yournextstore
+```
+
+Se quiser orquestrar a app junto dentro do mesmo compose, descomente o bloco `app:` no `docker-compose.yml` e ajuste variáveis conforme necessário.
+
+Para verificar se está tudo ok:
+```bash
+docker compose ps
+docker logs yournextstore-mongo --tail=50
+```
+
+Para entrar no shell do mongo rapidamente (requer `mongosh` instalado na sua máquina):
+```bash
+mongosh "mongodb://localhost:27017/yournextstore" --eval 'db.runCommand({ ping: 1 })'
+```
+
+Parar e remover (mantendo os dados no volume):
+```bash
+docker compose stop mongo
+```
+
+Remover tudo incluindo volume (DANGER):
+```bash
+docker compose down -v
+```
+
 ## Add products
 
 Your Next Store gets all the products, prices, descriptions, and categories from Stripe. So, if you know Stripe already, you'll feel right at home!

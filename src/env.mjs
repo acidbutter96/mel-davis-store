@@ -15,6 +15,13 @@ export const env = createEnv({
 			.string()
 			.optional()
 			.transform((str) => !!str),
+		// MongoDB (aceita mongodb:// ou mongodb+srv://)
+		MONGODB_URI: z
+			.string()
+			.min(1)
+			.regex(/^mongodb(\+srv)?:\/\//, "MONGODB_URI deve começar com mongodb:// ou mongodb+srv://"),
+		MONGODB_DB_NAME: z.string(),
+		JWT_SECRET: z.string().min(32),
 	},
 	client: {
 		// Can be provided via env or parameters to Commerce Kit, thus optional
@@ -40,6 +47,9 @@ export const env = createEnv({
 		ENABLE_STRIPE_TAX: process.env.ENABLE_STRIPE_TAX,
 
 		NEXT_PUBLIC_LANGUAGE: process.env.NEXT_PUBLIC_LANGUAGE,
+		MONGODB_URI: process.env.MONGODB_URI,
+		MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
+		JWT_SECRET: process.env.JWT_SECRET,
 	},
 });
 

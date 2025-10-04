@@ -1,5 +1,7 @@
 "use server";
 
+import { jwtVerify } from "jose";
+import { cookies } from "next/headers";
 import Stripe from "stripe";
 import { env } from "@/env.mjs";
 import { getCartId } from "@/lib/cart-cookies";
@@ -7,9 +9,21 @@ import { commerce } from "@/lib/commerce-stripe";
 
 // Cria uma sessão de checkout Stripe a partir do carrinho atual.
 // Retorna a URL de redirecionamento.
-export async function createCheckoutSession(): Promise<{ url: string } | { error: string }> {
+export async function createCheckoutSession(): Promise<
+	{ url: string } | { error: string } | { requireAuth: true }
+> {
 	if (!env.STRIPE_SECRET_KEY) {
 		return { error: "Stripe secret key ausente" };
+	}
+
+	// Auth check via JWT cookie
+	try {
+		const cookieStore = await cookies();
+		const token = cookieStore.get("auth_token")?.value;
+		if (!token) return { requireAuth: true };
+		await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET));
+	} catch {
+		return { requireAuth: true };
 	}
 	const cartId = await getCartId();
 	if (!cartId) {
