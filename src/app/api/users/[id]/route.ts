@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { ObjectId } from "mongodb";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/api-auth";
 import { getDb } from "@/lib/mongodb";
 
 const updateUserSchema = z.object({
@@ -79,6 +80,8 @@ export async function GET(_req: NextRequest, ctx: ParamsSync | ParamsAsync) {
 }
 
 export async function PUT(req: NextRequest, ctx: ParamsSync | ParamsAsync) {
+	const auth = await requireAuth();
+	if ("error" in auth) return auth.error;
 	const { id: idRaw } = await resolveParams(ctx);
 	const parsed = parseObjectId(idRaw);
 	if ("error" in parsed) return parsed.error;
@@ -159,6 +162,8 @@ export async function PUT(req: NextRequest, ctx: ParamsSync | ParamsAsync) {
 }
 
 export async function DELETE(_req: NextRequest, ctx: ParamsSync | ParamsAsync) {
+	const auth = await requireAuth();
+	if ("error" in auth) return auth.error;
 	const { id: idRaw } = await resolveParams(ctx);
 	const parsed = parseObjectId(idRaw);
 	if ("error" in parsed) return parsed.error;

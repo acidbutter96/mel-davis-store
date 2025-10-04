@@ -39,13 +39,8 @@ export async function POST(req: NextRequest) {
 			.sign(getJwtSecretKey());
 
 		return new Response(
-			JSON.stringify({ user: { _id: String(user._id), email: user.email, name: user.name } }),
-			{
-				status: 200,
-				headers: {
-					"Set-Cookie": `auth_token=${token}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`,
-				},
-			},
+			JSON.stringify({ token, user: { _id: String(user._id), email: user.email, name: user.name } }),
+			{ status: 200 },
 		);
 	} catch (err) {
 		if (err instanceof z.ZodError) {

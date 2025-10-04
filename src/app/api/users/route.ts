@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/api-auth";
 import { ensureIndexes, getDb } from "@/lib/mongodb";
 
 const createUserSchema = z.object({
@@ -27,6 +28,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+	const auth = await requireAuth();
+	if ("error" in auth) return auth.error;
 	try {
 		const body = await req.json();
 		const data = createUserSchema.parse(body);
