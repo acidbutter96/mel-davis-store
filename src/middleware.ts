@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { decrypt, updateSession } from "./lib/auth";
+import { decrypt, updateSession } from "./lib/session";
 
-const ProtectedPaths = ["/orders"];
+const ProtectedPaths = ["/orders", "/user"]; // include user page
 
 export async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
@@ -26,5 +26,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ["/orders"],
+	matcher: ["/orders", "/user"],
 };

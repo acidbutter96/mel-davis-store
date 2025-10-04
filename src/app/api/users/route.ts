@@ -1,7 +1,7 @@
+import bcrypt from "bcryptjs";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { getDb, ensureIndexes } from "@/lib/mongodb";
-import bcrypt from "bcryptjs";
+import { ensureIndexes, getDb } from "@/lib/mongodb";
 
 const createUserSchema = z.object({
 	email: z.string().email(),
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
 		const existing = await db.collection("users").findOne({ email: data.email.toLowerCase() });
 		if (existing) {
-			return new Response(JSON.stringify({ error: "Email já cadastrado" }), { status: 409 });
+			return new Response(JSON.stringify({ error: "Email already registered" }), { status: 409 });
 		}
 
 		const now = new Date();
@@ -49,7 +49,13 @@ export async function POST(req: NextRequest) {
 		};
 		const result = await db.collection("users").insertOne(userDoc);
 		return new Response(
-			JSON.stringify({ _id: result.insertedId.toString(), email: userDoc.email, name: userDoc.name, createdAt: now, updatedAt: now }),
+			JSON.stringify({
+				_id: result.insertedId.toString(),
+				email: userDoc.email,
+				name: userDoc.name,
+				createdAt: now,
+				updatedAt: now,
+			}),
 			{ status: 201 },
 		);
 	} catch (err) {
@@ -57,6 +63,6 @@ export async function POST(req: NextRequest) {
 			return new Response(JSON.stringify({ error: err.flatten() }), { status: 400 });
 		}
 		console.error("[POST /api/users]", err);
-		return new Response(JSON.stringify({ error: "Erro ao criar usuário" }), { status: 500 });
+		return new Response(JSON.stringify({ error: "Failed to create user" }), { status: 500 });
 	}
 }

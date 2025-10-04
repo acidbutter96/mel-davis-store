@@ -1,9 +1,9 @@
-import type { NextRequest } from "next/server";
-import { z } from "zod";
-import { getDb } from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { env } from "@/env.mjs";
+import { getDb } from "@/lib/mongodb";
 
 const loginSchema = z.object({
 	email: z.string().email(),
@@ -19,15 +19,17 @@ export async function POST(req: NextRequest) {
 		const body = await req.json();
 		const { email, password } = loginSchema.parse(body);
 		const db = await getDb();
-		const user = await db.collection("users").findOne<{ _id: unknown; email: string; passwordHash?: string; name?: string }>(
-			{ email: email.toLowerCase() },
-		);
+		const user = await db
+			.collection("users")
+			.findOne<{ _id: unknown; email: string; passwordHash?: string; name?: string }>({
+				email: email.toLowerCase(),
+			});
 		if (!user || !user.passwordHash) {
-			return new Response(JSON.stringify({ error: "Credenciais inválidas" }), { status: 401 });
+			return new Response(JSON.stringify({ error: "Invalid credentials" }), { status: 401 });
 		}
 		const ok = await bcrypt.compare(password, user.passwordHash);
 		if (!ok) {
-			return new Response(JSON.stringify({ error: "Credenciais inválidas" }), { status: 401 });
+			return new Response(JSON.stringify({ error: "Invalid credentials" }), { status: 401 });
 		}
 
 		const token = await new SignJWT({ sub: String(user._id), email: user.email })
@@ -50,6 +52,6 @@ export async function POST(req: NextRequest) {
 			return new Response(JSON.stringify({ error: err.flatten() }), { status: 400 });
 		}
 		console.error("[POST /api/auth/login]", err);
-		return new Response(JSON.stringify({ error: "Erro no login" }), { status: 500 });
+		return new Response(JSON.stringify({ error: "Login error" }), { status: 500 });
 	}
 }

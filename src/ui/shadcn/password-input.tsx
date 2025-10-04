@@ -6,8 +6,8 @@ import { Input } from "@/ui/shadcn/input";
 
 /**
  * PasswordInput
- * Componente reutilizável de senha com botão de mostrar/ocultar.
- * Uso: <PasswordInput name="password" required />
+ * Reusable password component with show/hide toggle.
+ * Usage: <PasswordInput name="password" required />
  */
 export interface PasswordInputProps extends React.ComponentPropsWithoutRef<"input"> {
 	containerClassName?: string;
@@ -21,7 +21,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
 				<Input ref={ref} type={visible ? "text" : "password"} className={cn("pr-10", className)} {...props} />
 				<button
 					type="button"
-					aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+					aria-label={visible ? "Hide password" : "Show password"}
 					onClick={() => setVisible((v) => !v)}
 					className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground hover:text-foreground"
 					tabIndex={-1}

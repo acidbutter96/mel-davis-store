@@ -7,13 +7,12 @@ import { env } from "@/env.mjs";
 import { getCartId } from "@/lib/cart-cookies";
 import { commerce } from "@/lib/commerce-stripe";
 
-// Cria uma sessão de checkout Stripe a partir do carrinho atual.
-// Retorna a URL de redirecionamento.
+// Creates a Stripe checkout session from the current cart and returns a redirect URL.
 export async function createCheckoutSession(): Promise<
 	{ url: string } | { error: string } | { requireAuth: true }
 > {
 	if (!env.STRIPE_SECRET_KEY) {
-		return { error: "Stripe secret key ausente" };
+		return { error: "Missing Stripe secret key" };
 	}
 
 	// Auth check via JWT cookie
@@ -27,17 +26,17 @@ export async function createCheckoutSession(): Promise<
 	}
 	const cartId = await getCartId();
 	if (!cartId) {
-		return { error: "Carrinho vazio" };
+		return { error: "Empty cart" };
 	}
 
 	const cart = await commerce.cart.get({ cartId });
 	if (!cart || cart.items.length === 0) {
-		return { error: "Carrinho vazio" };
+		return { error: "Empty cart" };
 	}
 
 	const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: undefined });
 
-	// Tentamos usar variantId (Price) diretamente; fallback para productId se necessário.
+	// Attempt to use variantId (Price) directly; fallback to productId if needed.
 	const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cart.items.map((item) => ({
 		price: item.variantId || item.productId,
 		quantity: item.quantity,
@@ -53,11 +52,11 @@ export async function createCheckoutSession(): Promise<
 			// Poderíamos adicionar shipping_address_collection, tax details, etc.
 		});
 		if (!session.url) {
-			return { error: "Não foi possível criar sessão de checkout" };
+			return { error: "Could not create checkout session" };
 		}
 		return { url: session.url };
 	} catch (err) {
-		console.error("Erro criando sessão de checkout", err);
+		console.error("Error creating checkout session", err);
 		return { error: (err as Error).message };
 	}
 }

@@ -1,7 +1,7 @@
 import { type Db, MongoClient } from "mongodb";
 import { env } from "@/env.mjs";
 
-// Reutiliza conexão em desenvolvimento para evitar criar múltiplas conexões em HMR
+// Reuse connection in development to avoid creating multiple connections during HMR
 interface GlobalMongoCache {
 	client: MongoClient | null;
 	promise: Promise<MongoClient> | null;
@@ -43,7 +43,7 @@ export async function getMongoClient() {
 
 		const uri = env.MONGODB_URI.trim();
 
-		// Heurística: se usuário está usando Atlas mas deixou 'mongo' por engano
+		// Heuristic: user appears to use Atlas but left 'mongo' host by mistake
 		const looksLikeAtlasButWrongHost = uri.includes("mongodb.net") && /mongodb:\/\/mongo[:/]/.test(uri);
 		if (looksLikeAtlasButWrongHost) {
 			throw new Error(
@@ -51,72 +51,81 @@ export async function getMongoClient() {
 			);
 		}
 
-			const isSrv = uri.startsWith("mongodb+srv://");
-			const isLocalDockerHost = !isSrv && /mongodb:\/\/mongo(?::|\/)/.test(uri);
+		const isSrv = uri.startsWith("mongodb+srv://");
+		const isLocalDockerHost = !isSrv && /mongodb:\/\/mongo(?::|\/)/.test(uri);
 
-			mongoCache.promise = (async () => {
-				// Estratégia de tentativas em cascata:
-				// 1. URI original
-				// 2. Se host 'mongo' falhar com DNS -> trocar por localhost
-				// 3. Se ainda falhar e existir MONGODB_ATLAS_URI usar essa (permite manter MONGODB_URI legado)
-				const attempted: string[] = [];
+		mongoCache.promise = (async () => {
+			// Cascade retry strategy:
+			// 1. Original URI
+			// 2. If host 'mongo' fails with DNS -> swap for localhost
+			// 3. If still failing and MONGODB_ATLAS_URI exists, use it (keeps legacy MONGODB_URI)
+			const attempted: string[] = [];
 
-				async function tryUri(current: string) {
-					attempted.push(current);
-					return await connectWithRetry(current);
-				}
+			async function tryUri(current: string) {
+				attempted.push(current);
+				return await connectWithRetry(current);
+			}
 
-				let primaryError: any = null;
-				try {
-					return await tryUri(uri);
-				} catch (err: any) {
-					primaryError = err;
-					const msg = String(err?.message || "");
-					const dnsFailure = /EAI_AGAIN|ENOTFOUND|getaddrinfo/.test(msg) || /EAI_AGAIN/.test(String(err?.cause?.message));
-					if (isLocalDockerHost && dnsFailure) {
-						const localhostUri = uri.replace(/mongodb:\/\/mongo/, "mongodb://localhost");
-						console.warn(
-							`[Mongo] Host 'mongo' inalcançável (DNS). Tentando fallback: ${localhostUri}`,
-						);
-						try {
-							return await tryUri(localhostUri);
-						} catch (err2: any) {
-							// Segunda falha — tentar Atlas se disponível
-							const atlas = process.env.MONGODB_ATLAS_URI;
-							if (atlas) {
-								console.warn("[Mongo] Fallback localhost falhou. Tentando MONGODB_ATLAS_URI (Atlas)." );
-								try {
-									return await tryUri(atlas);
-								} catch (err3) {
-									throw buildEnhancedError([primaryError, err2, err3], attempted);
-								}
+			let primaryError: unknown = null;
+			try {
+				return await tryUri(uri);
+			} catch (err: unknown) {
+				primaryError = err;
+				const errObj = err as { message?: string; cause?: { message?: string } };
+				const msg = String(errObj?.message || "");
+				const dnsFailure =
+					/EAI_AGAIN|ENOTFOUND|getaddrinfo/.test(msg) || /EAI_AGAIN/.test(String(errObj?.cause?.message));
+				if (isLocalDockerHost && dnsFailure) {
+					const localhostUri = uri.replace(/mongodb:\/\/mongo/, "mongodb://localhost");
+					console.warn(`[Mongo] Host 'mongo' unreachable (DNS). Trying fallback: ${localhostUri}`);
+					try {
+						return await tryUri(localhostUri);
+					} catch (err2: unknown) {
+						// Segunda falha — tentar Atlas se disponível
+						const atlas = process.env.MONGODB_ATLAS_URI;
+						if (atlas) {
+							console.warn("[Mongo] Fallback localhost failed. Trying MONGODB_ATLAS_URI (Atlas).");
+							try {
+								return await tryUri(atlas);
+							} catch (err3: unknown) {
+								throw buildEnhancedError([primaryError, err2, err3], attempted);
 							}
-							throw buildEnhancedError([primaryError, err2], attempted);
 						}
+						throw buildEnhancedError([primaryError, err2], attempted);
 					}
-					throw enhanceIfAtlasMismatch(err, uri);
 				}
-			})();
+				throw enhanceIfAtlasMismatch(
+					err instanceof Error
+						? err
+						: new Error(String((err as { message?: string })?.message || "Unknown error")),
+					uri,
+				);
+			}
+		})();
 	}
 	mongoCache.client = await mongoCache.promise;
 	return mongoCache.client;
 }
 
-	function enhanceIfAtlasMismatch(err: any, uri: string) {
-		if (/mongodb\.net/.test(uri) && !uri.startsWith("mongodb+srv://")) {
-			err.message +=
-				"\n[Hint] URI de Atlas geralmente usa o formato mongodb+srv://. Verifique a string copiada no painel Atlas.";
-		}
-		return err;
+function enhanceIfAtlasMismatch(err: Error, uri: string) {
+	if (/mongodb\.net/.test(uri) && !uri.startsWith("mongodb+srv://")) {
+		err.message +=
+			"\n[Hint] Atlas URIs usually use the format mongodb+srv://. Check the string copied from the Atlas dashboard.";
 	}
+	return err;
+}
 
-	function buildEnhancedError(errors: any[], attempted: string[]) {
-		const e = new Error(
-			`Não foi possível conectar ao MongoDB após fallbacks. Tentativas: ${attempted.join(", ")}. Último erro: ${errors[errors.length - 1]?.message}`,
-		);
-		(e as any).causes = errors.map((x) => ({ message: x?.message, stack: x?.stack }));
-		return e;
-	}
+function buildEnhancedError(errors: unknown[], attempted: string[]) {
+	const e = new Error(
+		`Could not connect to MongoDB after fallbacks. Attempts: ${attempted.join(", ")}. Last error: ${String((errors[errors.length - 1] as { message?: string })?.message)}`,
+	);
+	(e as unknown as { causes: Array<{ message: string | undefined; stack: string | undefined }> }).causes =
+		errors.map((x) => {
+			const errX = x as { message?: string; stack?: string };
+			return { message: errX.message, stack: errX.stack };
+		});
+	return e;
+}
 
 export async function getDb(): Promise<Db> {
 	const client = await getMongoClient();
@@ -147,7 +156,7 @@ export interface UserDoc {
 		postalCode?: string;
 		country?: string;
 	};
-	passwordHash?: string; // TODO: implementar hash de senha se necessário
+	passwordHash?: string; // password hash
 	createdAt: Date;
 	updatedAt: Date;
 }

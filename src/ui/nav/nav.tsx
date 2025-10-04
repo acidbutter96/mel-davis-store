@@ -1,11 +1,13 @@
 import { UserIcon } from "lucide-react";
 import { CartIcon } from "@/components/cart-icon";
+import { auth } from "@/lib/auth";
 import { NavMenu } from "@/ui/nav/nav-menu";
 import { SearchNav } from "@/ui/nav/search-nav";
 import { SeoH1 } from "@/ui/seo-h1";
 import { YnsLink } from "@/ui/yns-link";
 
 export const Nav = async () => {
+	const session = await auth();
 	return (
 		<header className="z-50 py-4 sticky top-0 bg-white/90 backdrop-blur-xs nav-border-reveal">
 			<div className="mx-auto flex max-w-7xl items-center gap-2 px-4 flex-row sm:px-6 lg:px-8">
@@ -20,7 +22,7 @@ export const Nav = async () => {
 					<SearchNav />
 				</div>
 				<CartIcon />
-				<YnsLink href="/login">
+				<YnsLink href={session ? "/user" : "/login"}>
 					<UserIcon className="hover:text-neutral-500" />
 				</YnsLink>
 			</div>

@@ -10,18 +10,32 @@ import { cn } from "@/lib/utils";
 import { PasswordInput } from "@/ui/shadcn/password-input";
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
-	const [_state, action] = useActionState(login, {});
+	const [state, action] = useActionState(login, {});
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const next = searchParams.get("next");
 	const [mode, setMode] = useState<"login" | "register">("login");
 	const [pending, startTransition] = useTransition();
+	const [registerError, setRegisterError] = useState<string | null>(null);
 
 	// handle client-side registration submission
 	async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
+		setRegisterError(null);
 		const form = new FormData(e.currentTarget);
-		const payload = Object.fromEntries(form.entries());
+		const rawEntries = Array.from(form.entries()) as [string, string][];
+		const base: Record<string, unknown> = {};
+		const address: Record<string, string> = {};
+		for (const [key, value] of rawEntries) {
+			if (key.startsWith("address.")) {
+				const subKey = key.slice("address.".length);
+				if (value.trim() !== "") address[subKey] = value.trim();
+			} else {
+				base[key] = value;
+			}
+		}
+		if (Object.keys(address).length > 0) base.address = address;
+		const payload = base;
 		try {
 			const res = await fetch("/api/auth/register", {
 				method: "POST",
@@ -29,25 +43,35 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 				body: JSON.stringify(payload),
 			});
 			if (!res.ok) {
-				// TODO: surface errors nicely
+				if (res.status === 409) {
+					setRegisterError("Email already registered");
+				} else if (res.status === 400) {
+					setRegisterError("Invalid data. Please check the fields.");
+				} else {
+					setRegisterError("Failed to register. Please try again.");
+				}
 				return;
 			}
-			// após registrar, se next=checkout iniciar checkout
+			// success: auto-login (cookies already set by the API). Handle special checkout flow
 			if (next === "checkout") {
 				startTransition(async () => {
 					const c = await fetch("/api/checkout/session", { method: "POST" });
 					if (c.ok) {
-						const data = await c.json();
-						if (data.url) window.location.href = data.url;
-					} else {
-						router.push("/");
+						const data = (await c.json()) as { url?: string };
+						if (data.url) {
+							window.location.href = data.url;
+							return;
+						}
 					}
+					router.push("/checkout");
 				});
 				return;
 			}
-			router.push("/");
+			// Redirect to /user to show dashboard
+			router.push("/user");
 		} catch (err) {
 			console.error("register failed", err);
+			setRegisterError("Unexpected error. Please try again.");
 		}
 	}
 
@@ -55,15 +79,20 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 		<div className={cn("flex flex-col gap-6", className)} {...props}>
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-2xl">{mode === "login" ? "Login" : "Criar conta"}</CardTitle>
+					<CardTitle className="text-2xl">{mode === "login" ? "Login" : "Create account"}</CardTitle>
 					<CardDescription>
-						{mode === "login" ? "Entre com suas credenciais" : "Preencha os dados para criar sua conta"}
+						{mode === "login" ? "Enter your credentials" : "Fill in the details to create your account"}
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					{mode === "login" ? (
 						<form action={action}>
 							<div className="grid gap-6">
+								{state?.error && (
+									<p className="text-sm rounded-md bg-destructive/10 text-destructive px-3 py-2 border border-destructive/30">
+										{state.error}
+									</p>
+								)}
 								<div className="grid gap-2">
 									<Label htmlFor="email">Email</Label>
 									<Input name="email" type="email" placeholder="m@example.com" required />
@@ -73,15 +102,20 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 									<PasswordInput name="password" required />
 								</div>
 								<Button type="submit" className="w-full" disabled={pending}>
-									{pending ? "Entrando..." : "Login"}
+									{pending ? "Signing in..." : "Login"}
 								</Button>
 							</div>
 						</form>
 					) : (
 						<form onSubmit={handleRegister}>
 							<div className="grid gap-4">
+								{registerError && (
+									<p className="text-sm rounded-md bg-destructive/10 text-destructive px-3 py-2 border border-destructive/30">
+										{registerError}
+									</p>
+								)}
 								<div className="grid gap-2">
-									<Label htmlFor="name">Nome</Label>
+									<Label htmlFor="name">Name</Label>
 									<Input name="name" required />
 								</div>
 								<div className="grid gap-2">
@@ -89,43 +123,43 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 									<Input name="email" type="email" required />
 								</div>
 								<div className="grid gap-2">
-									<Label htmlFor="password">Senha</Label>
+									<Label htmlFor="password">Password</Label>
 									<PasswordInput name="password" required />
 								</div>
 								<div className="grid gap-2">
-									<Label htmlFor="phone">Telefone</Label>
+									<Label htmlFor="phone">Phone</Label>
 									<Input name="phone" placeholder="(11) 99999-0000" />
 								</div>
 								<div className="grid grid-cols-2 gap-2">
 									<div className="grid gap-2">
-										<Label htmlFor="line1">Endereço</Label>
-										<Input name="address.line1" placeholder="Rua / Av" />
+										<Label htmlFor="line1">Address</Label>
+										<Input name="address.line1" placeholder="Street" />
 									</div>
 									<div className="grid gap-2">
-										<Label htmlFor="line2">Compl.</Label>
-										<Input name="address.line2" placeholder="Apto" />
+										<Label htmlFor="line2">Line 2</Label>
+										<Input name="address.line2" placeholder="Apt" />
 									</div>
 								</div>
 								<div className="grid grid-cols-3 gap-2">
 									<div className="grid gap-2">
-										<Label htmlFor="city">Cidade</Label>
+										<Label htmlFor="city">City</Label>
 										<Input name="address.city" />
 									</div>
 									<div className="grid gap-2">
-										<Label htmlFor="state">Estado</Label>
+										<Label htmlFor="state">State</Label>
 										<Input name="address.state" />
 									</div>
 									<div className="grid gap-2">
-										<Label htmlFor="postalCode">CEP</Label>
+										<Label htmlFor="postalCode">Postal code</Label>
 										<Input name="address.postalCode" />
 									</div>
 								</div>
 								<div className="grid gap-2">
-									<Label htmlFor="country">País (ISO2)</Label>
+									<Label htmlFor="country">Country (ISO2)</Label>
 									<Input name="address.country" placeholder="BR" />
 								</div>
 								<Button type="submit" className="w-full" disabled={pending}>
-									{pending ? "Enviando..." : "Criar conta"}
+									{pending ? "Submitting..." : "Create account"}
 								</Button>
 							</div>
 						</form>
@@ -133,11 +167,11 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 					<div className="mt-4 text-center text-sm">
 						{mode === "login" ? (
 							<button type="button" className="underline" onClick={() => setMode("register")}>
-								Não tem conta? Cadastre-se
+								Don't have an account? Sign up
 							</button>
 						) : (
 							<button type="button" className="underline" onClick={() => setMode("login")}>
-								Já possui conta? Entrar
+								Already have an account? Sign in
 							</button>
 						)}
 					</div>
