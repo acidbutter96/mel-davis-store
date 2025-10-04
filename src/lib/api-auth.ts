@@ -1,7 +1,7 @@
 import { jwtVerify } from "jose";
 import { cookies, headers } from "next/headers";
 import { env } from "@/env.mjs";
-import { decrypt } from "@/lib/session";
+import { coreDecrypt } from "@/lib/session-core";
 
 export async function requireAuth() {
 	const h = await headers();
@@ -18,7 +18,7 @@ export async function requireAuth() {
 	}
 	const sessionToken = (await cookies()).get("session")?.value;
 	if (sessionToken) {
-		const data = await decrypt(sessionToken);
+		const data = await coreDecrypt(sessionToken);
 		if (data && data.expires > Date.now()) return { session: { sub: data.user.id, email: data.user.email } };
 	}
 	return { error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }) };

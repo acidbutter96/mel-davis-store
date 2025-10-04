@@ -1,7 +1,7 @@
 "use server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { encrypt, SessionDuration } from "@/lib/session";
+import { createPersistentSession, revokeSessionByJwt } from "@/lib/session";
 
 // Async wrappers to avoid non-async exports in a "use server" file
 export async function auth() {
@@ -43,18 +43,7 @@ export async function login(_state: unknown, formData: FormData): Promise<{ erro
 		if (!user || !user.passwordHash) return { error: "Invalid credentials" };
 		const ok = await bcrypt.compare(password, user.passwordHash);
 		if (!ok) return { error: "Invalid credentials" };
-		const expires = Date.now() + SessionDuration;
-		const session = await encrypt({
-			user: { id: String(user._id), email: user.email, name: user.name },
-			expires,
-		});
-		(await cookies()).set("session", session, {
-			expires: new Date(expires),
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
-			path: "/",
-		});
+		await createPersistentSession({ id: String(user._id), email: user.email, name: user.name });
 		redirect("/user");
 	} catch (err: unknown) {
 		if (
@@ -73,6 +62,8 @@ export async function login(_state: unknown, formData: FormData): Promise<{ erro
 
 export async function logout() {
 	"use server";
+	const ck = (await cookies()).get("session")?.value;
+	if (ck) await revokeSessionByJwt(ck);
 	(await cookies()).delete("session");
 	redirect("/login");
 }

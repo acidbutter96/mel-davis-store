@@ -2,7 +2,7 @@ import { jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { env } from "@/env.mjs";
-import { decrypt } from "@/lib/session";
+import { coreDecrypt } from "@/lib/session-core";
 
 async function verifyAuth(request: NextRequest) {
 	const auth = request.headers.get("authorization") || request.headers.get("Authorization");
@@ -18,7 +18,7 @@ async function verifyAuth(request: NextRequest) {
 	}
 	const session = request.cookies.get("session")?.value;
 	if (session) {
-		const data = await decrypt(session);
+		const data = await coreDecrypt(session);
 		if (data && data.expires > Date.now()) return true;
 	}
 	return false;

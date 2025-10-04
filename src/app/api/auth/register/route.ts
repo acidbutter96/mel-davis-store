@@ -3,6 +3,7 @@ import { SignJWT } from "jose";
 import { z } from "zod";
 import { env } from "@/env.mjs";
 import { ensureIndexes, getDb } from "@/lib/mongodb";
+import { createPersistentSession } from "@/lib/session";
 
 const registerSchema = z.object({
 	email: z.string().email(),
@@ -57,7 +58,9 @@ export async function POST(req: Request) {
 
 		const res = await db.collection("users").insertOne(userDoc);
 
-		const legacyToken = await new SignJWT({ sub: res.insertedId.toString(), email: emailLower })
+		const userId = res.insertedId.toString();
+		await createPersistentSession({ id: userId, email: emailLower, name: data.name });
+		const legacyToken = await new SignJWT({ sub: userId, email: emailLower })
 			.setProtectedHeader({ alg: "HS256" })
 			.setIssuedAt()
 			.setExpirationTime("7d")
@@ -65,7 +68,7 @@ export async function POST(req: Request) {
 		return new Response(
 			JSON.stringify({
 				token: legacyToken,
-				user: { _id: res.insertedId.toString(), email: emailLower, name: data.name },
+				user: { _id: userId, email: emailLower, name: data.name },
 				autoLoggedIn: true,
 			}),
 			{ status: 201 },

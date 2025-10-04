@@ -138,6 +138,17 @@ export async function ensureIndexes() {
 	if (indexesEnsured) return;
 	const db = await getDb();
 	await db.collection("users").createIndex({ email: 1 }, { unique: true });
+	const sessions = db.collection("sessions");
+	try {
+		await sessions.createIndex({ userId: 1, jwt: 1 });
+	} catch {}
+	try {
+		await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+	} catch {}
+	// Normalização de sessões antigas sem expiresAt
+	await sessions.updateMany({ expiresAt: { $exists: false }, expires: { $gt: 0 } }, [
+		{ $set: { expiresAt: { $toDate: "$expires" } } },
+	]);
 	indexesEnsured = true;
 }
 
