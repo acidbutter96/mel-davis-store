@@ -1,6 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "@/i18n/client";
+
+function safeT() {
+	try {
+		return useTranslations("Global.globalError");
+	} catch {
+		return (k: string) => {
+			switch (k) {
+				case "title":
+					return "Something went wrong";
+				case "moreDetails":
+					return "More details";
+				case "tryAgainButton":
+					return "Try again";
+				default:
+					return k;
+			}
+		};
+	}
+}
 
 export default function GlobalError({
 	error,
@@ -9,7 +29,8 @@ export default function GlobalError({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
-	const t = useTranslations("Global.globalError");
+	const [, force] = useState(0);
+	const t = safeT();
 
 	return (
 		<html>
@@ -23,7 +44,17 @@ export default function GlobalError({
 						{error.stack && <pre>{error.stack}</pre>}
 					</details>
 				)}
-				<button onClick={() => reset()}>{t("tryAgainButton")}</button>
+				<button
+					onClick={() => {
+						try {
+							reset();
+						} catch {
+							force((n) => n + 1);
+						}
+					}}
+				>
+					{t("tryAgainButton")}
+				</button>
 			</body>
 		</html>
 	);

@@ -173,6 +173,13 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 									try {
 										const res = await createCheckoutSession();
 										if ("requireAuth" in res) {
+											try {
+												const apiRes = await fetch("/api/user", { method: "GET" });
+												if (apiRes.status === 401) {
+													window.location.href = "/login?next=checkout";
+													return;
+												}
+											} catch {}
 											window.location.href = "/login?next=checkout";
 										} else if ("error" in res) {
 											setError(res.error);
@@ -188,7 +195,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 								disabled={loading || !cart || cart.items.length === 0}
 								className="w-full rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
 							>
-								{loading ? "Criando sessão..." : "Checkout"}
+								{loading ? "Creating session..." : "Checkout"}
 							</button>
 						</div>
 					)}

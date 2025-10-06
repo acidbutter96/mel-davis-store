@@ -24,12 +24,10 @@ async function connectWithRetry(uri: string, attempts = 2, delayMs = 400): Promi
 	for (let i = 0; i < attempts; i++) {
 		try {
 			return await MongoClient.connect(uri, {
-				// Ajusta tempo de seleção para falhar mais cedo e dar feedback
 				serverSelectionTimeoutMS: 4000,
 			});
 		} catch (err) {
 			lastErr = err;
-			// Aguarda antes do próximo retry
 			if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
 		}
 	}
@@ -43,7 +41,6 @@ export async function getMongoClient() {
 
 		const uri = env.MONGODB_URI.trim();
 
-		// Heuristic: user appears to use Atlas but left 'mongo' host by mistake
 		const looksLikeAtlasButWrongHost = uri.includes("mongodb.net") && /mongodb:\/\/mongo[:/]/.test(uri);
 		if (looksLikeAtlasButWrongHost) {
 			throw new Error(
@@ -55,10 +52,6 @@ export async function getMongoClient() {
 		const isLocalDockerHost = !isSrv && /mongodb:\/\/mongo(?::|\/)/.test(uri);
 
 		mongoCache.promise = (async () => {
-			// Cascade retry strategy:
-			// 1. Original URI
-			// 2. If host 'mongo' fails with DNS -> swap for localhost
-			// 3. If still failing and MONGODB_ATLAS_URI exists, use it (keeps legacy MONGODB_URI)
 			const attempted: string[] = [];
 
 			async function tryUri(current: string) {
@@ -81,7 +74,6 @@ export async function getMongoClient() {
 					try {
 						return await tryUri(localhostUri);
 					} catch (err2: unknown) {
-						// Segunda falha — tentar Atlas se disponível
 						const atlas = process.env.MONGODB_ATLAS_URI;
 						if (atlas) {
 							console.warn("[Mongo] Fallback localhost failed. Trying MONGODB_ATLAS_URI (Atlas).");
@@ -145,7 +137,7 @@ export async function ensureIndexes() {
 	try {
 		await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 	} catch {}
-	// Normalização de sessões antigas sem expiresAt
+
 	await sessions.updateMany({ expiresAt: { $exists: false }, expires: { $gt: 0 } }, [
 		{ $set: { expiresAt: { $toDate: "$expires" } } },
 	]);
@@ -168,6 +160,23 @@ export interface UserDoc {
 		country?: string;
 	};
 	passwordHash?: string; // password hash
+	cart?: { items: Array<{ productId: string; variantId: string; quantity: number }> };
+	purchases?: Array<{
+		id: string;
+		createdAt: Date;
+		status: string; // e.g. paid, open, incomplete
+		amountTotal: number;
+		currency: string;
+		items: Array<{
+			priceId?: string | null;
+			productId?: string | null;
+			name?: string | null;
+			quantity: number;
+			unitAmount?: number | null;
+		}>;
+		invoiceId?: string | null;
+		paymentIntentId?: string | null;
+	}>;
 	createdAt: Date;
 	updatedAt: Date;
 }

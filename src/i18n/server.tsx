@@ -2,15 +2,44 @@ import { IntlMessageFormat } from "intl-messageformat";
 import { env } from "@/env.mjs";
 import type { IntlNamespaceKeys, NamespacedKeys } from "./types";
 
-type En = typeof import("../../messages/en-US.json");
+type MessagesShape = typeof import("../../messages/en-US.json");
+type MessageModule = Promise<{ default: MessagesShape }>;
 
-export const getLocale = async () => env.NEXT_PUBLIC_LANGUAGE;
-export const getMessages = async () =>
-	(
-		(await import(`../../messages/${await getLocale()}.json`)) as {
-			default: En;
-		}
-	).default;
+const createMessageLoader = (loader: () => Promise<{ default: unknown }>) => loader as () => MessageModule;
+
+const MESSAGE_LOADERS = {
+	"en-US": createMessageLoader(() => import("../../messages/en-US.json")),
+	"de-DE": createMessageLoader(() => import("../../messages/de-DE.json")),
+	"fr-CA": createMessageLoader(() => import("../../messages/fr-CA.json")),
+	"jp-JP": createMessageLoader(() => import("../../messages/jp-JP.json")),
+	"zh-CN": createMessageLoader(() => import("../../messages/zh-CN.json")),
+	"zh-TW": createMessageLoader(() => import("../../messages/zh-TW.json")),
+} satisfies Record<string, () => MessageModule>;
+
+type AvailableLocale = keyof typeof MESSAGE_LOADERS;
+const FALLBACK_LOCALE: AvailableLocale = "en-US";
+
+const resolveLocale = (value: string | undefined): AvailableLocale => {
+	if (value && value in MESSAGE_LOADERS) {
+		return value as AvailableLocale;
+	}
+	if (value) {
+		const lower = value.toLowerCase();
+		const match = (Object.keys(MESSAGE_LOADERS) as AvailableLocale[]).find(
+			(locale) => locale.toLowerCase() === lower,
+		);
+		if (match) return match;
+	}
+	return FALLBACK_LOCALE;
+};
+
+export const getLocale = async (): Promise<AvailableLocale> => resolveLocale(env.NEXT_PUBLIC_LANGUAGE);
+
+export const getMessages = async () => {
+	const locale = await getLocale();
+	const { default: messages } = await MESSAGE_LOADERS[locale]();
+	return messages;
+};
 
 export const getTranslations = async <TNamespaceKey extends IntlNamespaceKeys = never>(
 	namespaceKey: TNamespaceKey,

@@ -5,9 +5,7 @@ import { z } from "zod";
 
 export const env = createEnv({
 	server: {
-		// Can be provided via env or parameters to Commerce Kit, thus optional
 		STRIPE_SECRET_KEY: z.string().optional(),
-		// Required in Commerce Kit
 		STRIPE_CURRENCY: z.string(),
 		STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
@@ -15,7 +13,6 @@ export const env = createEnv({
 			.string()
 			.optional()
 			.transform((str) => !!str),
-		// MongoDB (aceita mongodb:// ou mongodb+srv://)
 		MONGODB_URI: z
 			.string()
 			.min(1)
@@ -24,7 +21,6 @@ export const env = createEnv({
 		JWT_SECRET: z.string().min(32),
 	},
 	client: {
-		// Can be provided via env or parameters to Commerce Kit, thus optional
 		NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 		NEXT_PUBLIC_URL: z.string().url().optional(),
 
@@ -64,6 +60,5 @@ if (!publicUrl) {
 	throw new Error("Missing NEXT_PUBLIC_URL or NEXT_PUBLIC_VERCEL_URL variables!");
 }
 
-// force type inference to string
 const _publicUrl = publicUrl;
 export { _publicUrl as publicUrl };

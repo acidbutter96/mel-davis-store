@@ -1,21 +1,7 @@
-import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { env } from "@/env.mjs";
+import { getUserIdFromAuthHeader } from "@/lib/api-auth-helpers";
 import { getDb } from "@/lib/mongodb";
 import { decrypt } from "@/lib/session";
-
-async function getUserIdFromAuthHeader(): Promise<string | null> {
-	const h = await import("next/headers").then((m) => m.headers());
-	const auth = (await h).get("authorization") || (await h).get("Authorization");
-	if (!auth?.startsWith("Bearer ")) return null;
-	const token = auth.slice(7).trim();
-	try {
-		const secret = new TextEncoder().encode(env.JWT_SECRET);
-		const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
-		if (payload && typeof payload.sub === "string") return payload.sub;
-	} catch {}
-	return null;
-}
 
 export async function GET() {
 	let userId: string | null = null;
@@ -23,8 +9,10 @@ export async function GET() {
 	if (!userId) {
 		const sessionToken = (await cookies()).get("session")?.value;
 		if (sessionToken) {
-			const data = await decrypt(sessionToken);
-			if (data && data.expires > Date.now()) userId = data.user.id;
+			try {
+				const data = await decrypt(sessionToken);
+				if (data && data.expires > Date.now()) userId = data.user.id;
+			} catch {}
 		}
 	}
 	if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });

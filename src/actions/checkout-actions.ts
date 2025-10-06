@@ -1,13 +1,13 @@
 "use server";
 
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { ObjectId } from "mongodb";
 import Stripe from "stripe";
-import { env } from "@/env.mjs";
-import { getCartId } from "@/lib/cart-cookies";
+import { env, publicUrl } from "@/env.mjs";
+import { requireAuth } from "@/lib/api-auth";
 import { commerce } from "@/lib/commerce-stripe";
+import type { Cart } from "@/lib/commerce-types";
+import { getDb } from "@/lib/mongodb";
 
-// Creates a Stripe checkout session from the current cart and returns a redirect URL.
 export async function createCheckoutSession(): Promise<
 	{ url: string } | { error: string } | { requireAuth: true }
 > {
@@ -15,41 +15,87 @@ export async function createCheckoutSession(): Promise<
 		return { error: "Missing Stripe secret key" };
 	}
 
-	// Auth check via JWT cookie
-	try {
-		const cookieStore = await cookies();
-		const token = cookieStore.get("auth_token")?.value;
-		if (!token) return { requireAuth: true };
-		await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET));
-	} catch {
-		return { requireAuth: true };
-	}
-	const cartId = await getCartId();
-	if (!cartId) {
+	const auth = await requireAuth();
+	if ("error" in auth) return { requireAuth: true };
+
+	const userId = auth.session.sub as string;
+	const db = await getDb();
+	const user = await db.collection("users").findOne<{
+		cart?: { items: { productId: string; variantId: string; quantity: number }[] };
+		email?: string;
+		name?: string;
+		phone?: string;
+		stripeCustomerId?: string;
+	}>(
+		{ _id: new ObjectId(userId) },
+		{ projection: { cart: 1, email: 1, name: 1, phone: 1, stripeCustomerId: 1 } },
+	);
+	const minimal = user?.cart?.items || [];
+	if (minimal.length === 0) {
 		return { error: "Empty cart" };
 	}
 
-	const cart = await commerce.cart.get({ cartId });
-	if (!cart || cart.items.length === 0) {
-		return { error: "Empty cart" };
+	const enrichedItems: Cart["items"] = [];
+	for (const m of minimal) {
+		const resolved = await commerce.variant
+			.resolve({ id: m.variantId })
+			.catch(async () => commerce.variant.resolve({ id: m.productId }).catch(() => null));
+		if (!resolved) continue;
+		const { product, variant } = resolved;
+		enrichedItems.push({
+			id: m.variantId,
+			productId: product.id,
+			variantId: variant.id,
+			quantity: m.quantity,
+			price: variant.price || product.price || 0,
+			product: { id: product.id, name: product.name, images: product.images, summary: product.summary },
+		});
 	}
+	if (enrichedItems.length === 0) return { error: "Empty cart" };
+	const currency = (env.STRIPE_CURRENCY || "USD").toUpperCase();
+	const cart: Cart = {
+		id: "user-cart",
+		items: enrichedItems,
+		total: enrichedItems.reduce((s, i) => s + i.price * i.quantity, 0),
+		currency: currency.toUpperCase(),
+	};
 
 	const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: undefined });
+	const baseUrl = process.env.NEXT_PUBLIC_URL || publicUrl;
 
-	// Attempt to use variantId (Price) directly; fallback to productId if needed.
+	let stripeCustomerId = user?.stripeCustomerId;
+	if (!stripeCustomerId && user?.email) {
+		try {
+			const customer = await stripe.customers.create({
+				email: user.email,
+				name: user.name,
+				phone: user.phone,
+				metadata: { userId },
+			});
+			stripeCustomerId = customer.id;
+			await db
+				.collection("users")
+				.updateOne({ _id: new ObjectId(userId) }, { $set: { stripeCustomerId, updatedAt: new Date() } });
+		} catch (e) {
+			console.error("Failed to create stripe customer", e);
+		}
+	}
+
 	const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cart.items.map((item) => ({
 		price: item.variantId || item.productId,
 		quantity: item.quantity,
-		// Se variantId não for um price válido, Stripe vai falhar e poderemos ajustar depois.
 	}));
 
 	try {
 		const session = await stripe.checkout.sessions.create({
 			mode: "payment",
 			line_items,
-			success_url: `${process.env.NEXT_PUBLIC_URL}/?checkout=success`,
-			cancel_url: `${process.env.NEXT_PUBLIC_URL}/?checkout=cancel`,
-			// Poderíamos adicionar shipping_address_collection, tax details, etc.
+			customer: stripeCustomerId,
+			customer_email: !stripeCustomerId ? user?.email : undefined,
+			phone_number_collection: user?.phone ? { enabled: true } : undefined,
+			metadata: { userId },
+			success_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+			cancel_url: `${baseUrl}/?checkout=cancel`,
 		});
 		if (!session.url) {
 			return { error: "Could not create checkout session" };

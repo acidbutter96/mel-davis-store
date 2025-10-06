@@ -9,12 +9,7 @@ import {
 	useOptimistic,
 	useState,
 } from "react";
-import {
-	addToCartAction,
-	getCartAction,
-	removeFromCartAction,
-	updateCartItemAction,
-} from "@/actions/cart-actions";
+import { addToCartAction, removeFromCartAction, updateCartItemAction } from "@/actions/cart-actions";
 import type { Cart, ProductInfo } from "@/lib/commerce-types";
 
 type CartAction =
@@ -38,7 +33,6 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 	switch (action.type) {
 		case "ADD_ITEM": {
 			if (!state) {
-				// Create a new cart if none exists
 				return {
 					id: "optimistic",
 					items: [
@@ -47,7 +41,7 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 							productId: action.variantId,
 							variantId: action.variantId,
 							quantity: action.quantity,
-							price: 0, // Will be updated from server
+							price: 0,
 							product: action.product,
 						},
 					],
@@ -56,13 +50,11 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 				};
 			}
 
-			// Check if item already exists
 			const existingItemIndex = state.items.findIndex(
 				(item) => (item.variantId || item.productId) === action.variantId,
 			);
 
 			if (existingItemIndex >= 0) {
-				// Update existing item
 				const existingItem = state.items[existingItemIndex];
 				if (existingItem) {
 					const updatedItems = [...state.items];
@@ -77,7 +69,6 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 				}
 			}
 
-			// Add new item
 			return {
 				...state,
 				items: [
@@ -87,7 +78,7 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 						productId: action.variantId,
 						variantId: action.variantId,
 						quantity: action.quantity,
-						price: 0, // Will be updated from server
+						price: 0,
 						product: action.product,
 					},
 				],
@@ -98,7 +89,6 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 			if (!state) return state;
 
 			if (action.quantity <= 0) {
-				// Remove item if quantity is 0 or less
 				return {
 					...state,
 					items: state.items.filter((item) => (item.variantId || item.productId) !== action.variantId),
@@ -146,19 +136,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	// Calculate item count from optimistic cart
 	const itemCount = optimisticCart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
+	// Helper to fetch cart via API (reads go through GET endpoint to ensure fresh data)
+	async function fetchCart(): Promise<Cart | null> {
+		try {
+			const res = await fetch("/api/cart", { method: "GET", cache: "no-store" });
+			if (!res.ok) return null;
+			const data = (await res.json()) as { cart: Cart | null };
+			return data.cart;
+		} catch (e) {
+			console.error("Failed to fetch cart", e);
+			return null;
+		}
+	}
+
 	// Load initial cart
 	useEffect(() => {
-		// Inicialização do carrinho dentro de startTransition para evitar warning de atualização otimista
-		getCartAction().then((cart) => {
+		fetchCart().then((cart) => {
 			startTransition(() => {
 				setActualCart(cart);
 			});
 		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	// Sync optimistic cart with actual cart when it changes
 	useEffect(() => {
-		if (actualCart === optimisticCart) return; // evita transições redundantes
+		if (actualCart === optimisticCart) return;
 		startTransition(() => {
 			setOptimisticCart({ type: "SYNC_CART", cart: actualCart });
 		});
@@ -168,17 +171,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	const closeCart = () => setIsCartOpen(false);
 
 	const optimisticAdd = async (variantId: string, quantity = 1, product?: ProductInfo) => {
-		// Optimistic update dentro de startTransition para cumprir regras do React 19
 		startTransition(() => {
 			setOptimisticCart({ type: "ADD_ITEM", variantId, quantity, product });
+			setIsCartOpen(true);
 		});
-
 		try {
-			// Perform server action
 			const updatedCart = await addToCartAction(variantId, quantity);
 			setActualCart(updatedCart);
+			// Force a fresh fetch (enrichment + migration) from API
+			const refreshed = await fetchCart();
+			if (refreshed) setActualCart(refreshed);
 		} catch (error) {
-			// Rollback will happen automatically via useEffect
 			console.error("Failed to add to cart:", error);
 			throw error;
 		}
