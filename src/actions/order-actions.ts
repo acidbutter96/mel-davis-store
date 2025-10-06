@@ -9,8 +9,8 @@ import { commerce } from "@/lib/commerce-stripe";
 import { getDb } from "@/lib/mongodb";
 
 /**
- * Limpa o carrinho armazenado no documento do usuário após a finalização do checkout.
- * Também remove (se existir) o carrinho em memória/cookie legado para manter consistência.
+ * Clears the cart stored on the user document after the checkout is finalized.
+ * Also removes the legacy in-memory/cookie cart, if it exists, to keep things consistent.
  */
 export async function finalizeCheckoutCleanup(): Promise<{ ok: true } | { error: string }> {
 	const auth = await requireAuth();
@@ -37,8 +37,8 @@ export async function finalizeCheckoutCleanup(): Promise<{ ok: true } | { error:
 }
 
 /**
- * Salva uma compra no documento do usuário usando o session_id retornado no success_url.
- * Não substitui o webhook (fonte de verdade), mas permite registrar imediatamente.
+ * Saves a purchase on the user document using the session_id returned on success_url.
+ * This doesn't replace the webhook (source of truth), but it allows immediate recording.
  */
 export async function recordSuccessfulCheckout(sessionId: string): Promise<{ ok: true } | { error: string }> {
 	if (!sessionId || !sessionId.startsWith("cs_")) return { error: "Invalid session id" };

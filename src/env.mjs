@@ -16,7 +16,7 @@ export const env = createEnv({
 		MONGODB_URI: z
 			.string()
 			.min(1)
-			.regex(/^mongodb(\+srv)?:\/\//, "MONGODB_URI deve começar com mongodb:// ou mongodb+srv://"),
+			.regex(/^mongodb(\+srv)?:\/\//, "MONGODB_URI must start with mongodb:// or mongodb+srv://"),
 		MONGODB_DB_NAME: z.string(),
 		JWT_SECRET: z.string().min(32),
 	},

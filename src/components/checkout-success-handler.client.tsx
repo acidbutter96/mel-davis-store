@@ -44,7 +44,7 @@ export function CheckoutSuccessHandler() {
 							try {
 								await recordSuccessfulCheckout(sessionId);
 							} catch (e) {
-								console.warn("Falha ao registrar compra localmente", e);
+								console.warn("Failed to record purchase locally", e);
 							}
 						}
 					}
@@ -54,7 +54,7 @@ export function CheckoutSuccessHandler() {
 				console.error("Failed to cleanup after checkout", e);
 				showToast(statusMessages.error);
 			} finally {
-				// Remove o parâmetro da URL
+				// Remove the query parameters from the URL
 				const sp = new URLSearchParams(Array.from(searchParams.entries()));
 				sp.delete("checkout");
 				sp.delete("session_id");
@@ -93,58 +93,58 @@ const statusMessages: Record<
 > = {
 	success: {
 		type: "success",
-		title: "Pagamento confirmado",
-		description: "Obrigado pela sua compra!",
+		title: "Payment confirmed",
+		description: "Thank you for your purchase!",
 	},
 	processing: {
 		type: "info",
-		title: "Pagamento em processamento",
-		description: "Assim que o banco confirmar, atualizaremos o status da sua compra.",
+		title: "Payment processing",
+		description: "We'll update your order status as soon as the bank confirms.",
 	},
 	requires_payment_method: {
 		type: "error",
-		title: "Pagamento não autorizado",
-		description: "Revise seus dados de pagamento ou utilize outro método.",
+		title: "Payment not authorized",
+		description: "Review your payment details or try another method.",
 	},
 	failed: {
 		type: "error",
-		title: "Pagamento não concluído",
-		description: "Nada foi cobrado e o carrinho continua disponível.",
+		title: "Payment not completed",
+		description: "No charges were made and the cart is still available.",
 	},
 	open: {
 		type: "info",
-		title: "Checkout ainda aberto",
-		description: "Finalize o pagamento para concluir o pedido.",
+		title: "Checkout still open",
+		description: "Complete the payment to finish your order.",
 	},
 	expired: {
 		type: "warning",
-		title: "Sessão expirada",
-		description: "Reinicie o checkout para tentar novamente.",
+		title: "Session expired",
+		description: "Restart the checkout to try again.",
 	},
 	cancel: {
 		type: "warning",
-		title: "Checkout cancelado",
-		description: "Seus itens continuam no carrinho caso queira tentar outra vez.",
+		title: "Checkout canceled",
+		description: "Your items remain in the cart if you'd like to try again.",
 	},
 	missing_session: {
 		type: "error",
-		title: "Sessão de checkout não encontrada",
-		description: "Tente iniciar um novo checkout.",
+		title: "Checkout session not found",
+		description: "Try starting a new checkout.",
 	},
 	stripe_not_configured: {
 		type: "error",
-		title: "Stripe não configurado",
-		description: "Verifique as variáveis de ambiente do servidor.",
+		title: "Stripe not configured",
+		description: "Check the server environment variables.",
 	},
 	error: {
 		type: "error",
-		title: "Erro ao validar pagamento",
-		description: "Tente novamente ou contate o suporte se persistir.",
+		title: "Error validating payment",
+		description: "Try again or contact support if it persists.",
 	},
 	unknown: {
 		type: "info",
-		title: "Status de checkout desconhecido",
-		description: "Estamos investigando. Caso necessário, tente novamente.",
+		title: "Unknown checkout status",
+		description: "We're looking into it. Please try again if needed.",
 	},
 };
 

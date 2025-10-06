@@ -118,46 +118,46 @@ https://github.com/yournextstore/.github/assets/200613/01d27f69-00dc-446e-bc81-5
 
 After following the above steps, run `bun install` to install the required dependencies, and then run `bun dev` to start the development server on your machine. Your Next Store will be available at [localhost:3000](http://localhost:3000)
 
-### (Opcional) Subir MongoDB com Docker Compose
+### (Optional) Launch MongoDB with Docker Compose
 
-Se você não tem uma instância do MongoDB local, use o arquivo `docker-compose.yml` adicionado:
+If you don't have a local MongoDB instance, use the included `docker-compose.yml`:
 
 ```bash
 docker compose up -d mongo
 ```
 
-Isso irá:
-- Baixar a imagem `mongo:7.0`
-- Criar um volume persistente `mongo_data`
-- Expor a porta `27017`
-- Rodar um healthcheck (ping)
+This will:
+- Download the `mongo:7.0` image
+- Create a persistent `mongo_data` volume
+- Expose port `27017`
+- Run a healthcheck (ping)
 
-No seu `.env` local deixe (já existe em `.env.example`):
+In your local `.env` (already present in `.env.example`):
 
 ```
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DB_NAME=yournextstore
 ```
 
-Se quiser orquestrar a app junto dentro do mesmo compose, descomente o bloco `app:` no `docker-compose.yml` e ajuste variáveis conforme necessário.
+If you want to orchestrate the app within the same compose file, uncomment the `app:` block in `docker-compose.yml` and adjust variables as needed.
 
-Para verificar se está tudo ok:
+To verify everything is running:
 ```bash
 docker compose ps
 docker logs yournextstore-mongo --tail=50
 ```
 
-Para entrar no shell do mongo rapidamente (requer `mongosh` instalado na sua máquina):
+To quickly open the mongo shell (requires `mongosh` installed locally):
 ```bash
 mongosh "mongodb://localhost:27017/yournextstore" --eval 'db.runCommand({ ping: 1 })'
 ```
 
-Parar e remover (mantendo os dados no volume):
+Stop and remove (keeping the data in the volume):
 ```bash
 docker compose stop mongo
 ```
 
-Remover tudo incluindo volume (DANGER):
+Remove everything including the volume (DANGER):
 ```bash
 docker compose down -v
 ```
@@ -194,22 +194,22 @@ Now you should see all added products in Your Next Store.
 
 ### Checkout
 
-O botão de Checkout cria uma sessão Stripe Checkout usando os itens do carrinho (cada `variantId` é tratado como um `price id`).
+The Checkout button creates a Stripe Checkout session using the cart items (each `variantId` is treated as a `price id`).
 
-Pré-requisitos:
-- Definir `NEXT_PUBLIC_URL` corretamente (usado para `success_url` e `cancel_url`).
-- Produtos devem ter Prices ativos no Stripe; o `variantId` armazenado no carrinho corresponde ao `price.id` retornado.
+Prerequisites:
+- Set `NEXT_PUBLIC_URL` correctly (used for `success_url` and `cancel_url`).
+- Products must have active Prices in Stripe; the `variantId` stored in the cart corresponds to the returned `price.id`.
 
-Fluxo:
-1. Usuário abre o carrinho e clica em Checkout.
-2. A server action `createCheckoutSession` cria a sessão no Stripe.
-3. O usuário é redirecionado para a página hospedada do Stripe.
-4. Ao concluir, Stripe redireciona para `/?checkout=success` (ou `cancel`).
+Flow:
+1. The user opens the cart and clicks Checkout.
+2. The `createCheckoutSession` server action creates the session in Stripe.
+3. The user is redirected to Stripe's hosted page.
+4. Upon completion, Stripe redirects to `/?checkout=success` (or `cancel`).
 
-Se ocorrer erro (ex: price inválido), uma mensagem aparece no carrinho.
+If an error occurs (e.g., invalid price), a message appears in the cart.
 
 > [!TIP]
-> If all produtos apareciam como "Out of stock": garanta que você só define `stock` quando quiser controlar o inventário. Remova o metadata ou deixe-o vazio para produtos com estoque "ilimitado" / não rastreado; use `stock=0` apenas quando realmente indisponível.
+> If every product shows as "Out of stock", make sure you only set `stock` when you want to control inventory. Remove the metadata or leave it empty for products with "unlimited" / untracked stock; use `stock=0` only when it's truly unavailable.
 
 ## Variants
 
