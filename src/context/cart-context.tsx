@@ -29,6 +29,8 @@ interface CartContextType {
 	optimisticUpdate: (variantId: string, quantity: number) => Promise<void>;
 	optimisticRemove: (variantId: string) => Promise<void>;
 	cartReady: boolean;
+	// Force a fresh fetch of the cart from the server
+	refreshCart: () => Promise<void>;
 }
 
 function cartReducer(state: Cart | null, action: CartAction): Cart | null {
@@ -152,6 +154,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 		}
 	}
 
+	// Expose a stable refresh function to re-fetch the cart and update state
+	const refreshCart = async () => {
+		try {
+			const cart = await fetchCart();
+			startTransition(() => setActualCart(cart));
+		} catch (e) {
+			console.error("Failed to refresh cart", e);
+		}
+	};
+
 	// Load initial cart
 	useEffect(() => {
 		fetchCart()
@@ -187,7 +199,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 	// Sync optimistic cart with actual cart when it changes
 	useEffect(() => {
-		if (actualCart === optimisticCart) return;
 		startTransition(() => {
 			setOptimisticCart({ type: "SYNC_CART", cart: actualCart });
 		});
@@ -257,6 +268,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 				optimisticUpdate,
 				optimisticRemove,
 				cartReady,
+				refreshCart,
 			}}
 		>
 			{children}

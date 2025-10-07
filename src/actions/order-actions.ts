@@ -103,14 +103,21 @@ export async function recordSuccessfulCheckout(sessionId: string): Promise<{ ok:
 			updateOne: (filter: unknown, update: unknown) => Promise<unknown>;
 		};
 
-		await userUpdateCol.updateOne(
-			{ _id: userObjectId },
-			{
-				$push: { purchases: { ...purchase, cart: cartSnapshot } },
-				$set: { updatedAt: new Date() },
-				$unset: { cart: "" },
-			},
+		// Idempotência: não insere se já existir purchase com mesmo id
+		const existing = await usersCol.findOne(
+			{ _id: userObjectId, "purchases.id": session.id },
+			{ projection: { _id: 1 } },
 		);
+		if (!existing) {
+			await userUpdateCol.updateOne(
+				{ _id: userObjectId },
+				{
+					$push: { purchases: { ...purchase, cart: cartSnapshot } },
+					$set: { updatedAt: new Date() },
+					$unset: { cart: "" },
+				},
+			);
+		}
 		return { ok: true };
 	} catch (e) {
 		console.error("[recordSuccessfulCheckout]", e);

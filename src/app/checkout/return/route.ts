@@ -56,6 +56,13 @@ export async function GET(req: NextRequest) {
 
 		console.log(session);
 
+		if (status === "success" || status === "processing") {
+			const sp = new URLSearchParams();
+			sp.set("session_id", sessionId);
+			sp.set("checkout", status);
+			return NextResponse.redirect(`${redirectBase}/checkout/processing?${sp.toString()}`);
+		}
+
 		return NextResponse.redirect(
 			buildRedirectUrl(redirectBase, {
 				[REDIRECT_PARAM]: status,

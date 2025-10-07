@@ -24,7 +24,7 @@ const successLikeStatuses: CheckoutStatus[] = ["success", "processing"];
 export function CheckoutSuccessHandler() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
-	const { closeCart } = useCart();
+	const { closeCart, refreshCart } = useCart();
 	const [ran, setRan] = useState(false);
 
 	useEffect(() => {
@@ -40,6 +40,7 @@ export function CheckoutSuccessHandler() {
 					if (sessionId) {
 						try {
 							await recordSuccessfulCheckout(sessionId);
+							refreshCart().catch(() => {});
 						} catch (e) {
 							console.warn("Failed to record purchase locally", e);
 						}
@@ -52,6 +53,13 @@ export function CheckoutSuccessHandler() {
 					}
 				}
 				showToast(message);
+
+				// If payment succeeded or is processing, refresh the cart so the
+				// central `cart` state in `CartProvider` reflects server-side changes.
+				if (successLikeStatuses.includes(status)) {
+					// best-effort refresh; don't block the UI flow
+					refreshCart().catch(() => {});
+				}
 			} catch (e) {
 				console.error("Failed to cleanup after checkout", e);
 				showToast(statusMessages.error);
