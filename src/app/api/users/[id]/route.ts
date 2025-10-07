@@ -41,23 +41,31 @@ function parseObjectId(idRaw: string | undefined) {
 	}
 }
 
-type ParamsSync = { params?: { id?: string } };
-type ParamsAsync = { params: Promise<{ id: string }> };
+type RouteParams = { id?: string | string[] };
+type RouteContext = { params: Promise<RouteParams> };
 
-function isPromise<T>(val: unknown): val is Promise<T> {
-	return !!val && typeof val === "object" && "then" in (val as object);
-}
-
-async function resolveParams(ctx: ParamsSync | ParamsAsync): Promise<{ id?: string }> {
-	const candidate: unknown = (ctx as ParamsSync).params ?? (ctx as ParamsAsync).params;
-	if (isPromise<{ id: string }>(candidate)) {
-		return await candidate;
+async function resolveParams(ctx: RouteContext): Promise<RouteParams> {
+	try {
+		const params = await ctx.params;
+		return params ?? {};
+	} catch {
+		return {};
 	}
-	return (candidate as { id?: string } | undefined) || {};
 }
 
-export async function GET(_req: NextRequest, ctx: ParamsSync | ParamsAsync) {
-	const { id: idRaw } = await resolveParams(ctx);
+function extractId(value: RouteParams["id"]): string | undefined {
+	if (typeof value === "string") return value;
+	if (Array.isArray(value)) return value[0];
+	return undefined;
+}
+
+async function resolveId(ctx: RouteContext): Promise<string | undefined> {
+	const { id } = await resolveParams(ctx);
+	return extractId(id);
+}
+
+export async function GET(_req: NextRequest, ctx: RouteContext) {
+	const idRaw = await resolveId(ctx);
 	const parsed = parseObjectId(idRaw);
 	if ("error" in parsed) return parsed.error;
 	const db = await getDb();
@@ -79,10 +87,10 @@ export async function GET(_req: NextRequest, ctx: ParamsSync | ParamsAsync) {
 	return json;
 }
 
-export async function PUT(req: NextRequest, ctx: ParamsSync | ParamsAsync) {
+export async function PUT(req: NextRequest, ctx: RouteContext) {
 	const auth = await requireAuth();
 	if ("error" in auth) return auth.error;
-	const { id: idRaw } = await resolveParams(ctx);
+	const idRaw = await resolveId(ctx);
 	const parsed = parseObjectId(idRaw);
 	if ("error" in parsed) return parsed.error;
 	try {
@@ -161,10 +169,10 @@ export async function PUT(req: NextRequest, ctx: ParamsSync | ParamsAsync) {
 	}
 }
 
-export async function DELETE(_req: NextRequest, ctx: ParamsSync | ParamsAsync) {
+export async function DELETE(_req: NextRequest, ctx: RouteContext) {
 	const auth = await requireAuth();
 	if ("error" in auth) return auth.error;
-	const { id: idRaw } = await resolveParams(ctx);
+	const idRaw = await resolveId(ctx);
 	const parsed = parseObjectId(idRaw);
 	if ("error" in parsed) return parsed.error;
 	const db = await getDb();

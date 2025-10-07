@@ -3,14 +3,33 @@ import Stripe from "stripe";
 import { env } from "@/env.mjs";
 import { requireAuth } from "@/lib/api-auth";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+type RouteParams = { id?: string | string[] };
+type RouteContext = { params: Promise<RouteParams> };
+
+async function resolveParams(ctx: RouteContext): Promise<RouteParams> {
+	try {
+		const params = await ctx.params;
+		return params ?? {};
+	} catch {
+		return {};
+	}
+}
+
+function extractId(value: RouteParams["id"]): string | undefined {
+	if (typeof value === "string") return value;
+	if (Array.isArray(value)) return value[0];
+	return undefined;
+}
+
+export async function GET(_req: Request, ctx: RouteContext) {
 	if (!env.STRIPE_SECRET_KEY) {
 		return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
 	}
 	const auth = await requireAuth();
 	if ("error" in auth) return auth.error; // 401
 
-	const { id } = params;
+	const params = await resolveParams(ctx);
+	const id = extractId(params.id);
 	if (!id || !id.startsWith("cs_")) {
 		return NextResponse.json({ error: "Invalid session id" }, { status: 400 });
 	}
