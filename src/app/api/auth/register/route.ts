@@ -151,6 +151,6 @@ export async function POST(req: Request) {
 			return new Response(JSON.stringify({ error: err.flatten() }), { status: 400 });
 		}
 		console.error("[POST /api/auth/register]", err);
-		return new Response(JSON.stringify({ error: "Failed to register" }), { status: 500 });
+		return new Response(JSON.stringify({ error: err }), { status: 500 });
 	}
 }
