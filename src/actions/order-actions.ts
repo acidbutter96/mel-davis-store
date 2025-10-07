@@ -124,3 +124,112 @@ export async function recordSuccessfulCheckout(sessionId: string): Promise<{ ok:
 		return { error: "Failed to record purchase" };
 	}
 }
+
+export async function getPurchaseDetails(purchaseId: string): Promise<
+	| { error: string }
+	| {
+			id: string;
+			status: string;
+			createdAt: Date | string;
+			amountTotal: number;
+			currency: string;
+			items: Array<{
+				name: string | null;
+				quantity: number;
+				unitAmount: number | null;
+				priceId: string | null;
+				productId: string | null;
+				image: string | null;
+			}>;
+	  }
+> {
+	if (!purchaseId) return { error: "Missing purchase id" };
+	const auth = await requireAuth();
+	if ("error" in auth) return { error: "Unauthorized" };
+	try {
+		const db = await getDb();
+		const userId = new ObjectId(auth.session.sub as string);
+		interface PurchaseItemDoc {
+			name?: string | null;
+			quantity?: number;
+			unitAmount?: number | null;
+			priceId?: string | null;
+			productId?: string | null;
+		}
+		interface PurchaseDoc {
+			id: string;
+			status: string;
+			createdAt: Date | string;
+			amountTotal: number;
+			currency: string;
+			items?: PurchaseItemDoc[];
+		}
+		const userDoc = await db
+			.collection("users")
+			.findOne<{ purchases?: PurchaseDoc[] }>(
+				{ _id: userId, "purchases.id": purchaseId },
+				{ projection: { purchases: 1 } },
+			);
+		const purchase = userDoc?.purchases?.find((p) => p.id === purchaseId);
+		if (!purchase) return { error: "Not found" };
+		let enrichedItems: Array<{
+			name: string | null;
+			quantity: number;
+			unitAmount: number | null;
+			priceId: string | null;
+			productId: string | null;
+			image: string | null;
+		}> = [];
+		if (env.STRIPE_SECRET_KEY) {
+			try {
+				const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: undefined });
+				for (const it of purchase.items || []) {
+					let name: string | null = it.name || null;
+					let image: string | null = null;
+					if (it.priceId) {
+						try {
+							const price = await stripe.prices.retrieve(it.priceId);
+							const productId = typeof price.product === "string" ? price.product : price.product?.id;
+							if (productId) {
+								try {
+									const product = await stripe.products.retrieve(productId);
+									name = product.name || name;
+									image = product.images?.[0] || null;
+								} catch (e) {}
+							}
+						} catch (e) {}
+					}
+					enrichedItems.push({
+						name,
+						quantity: it.quantity || 0,
+						unitAmount: it.unitAmount ?? null,
+						priceId: it.priceId || null,
+						productId: it.productId || null,
+						image,
+					});
+				}
+			} catch (e) {}
+		}
+		if (enrichedItems.length === 0) {
+			enrichedItems = (purchase.items || []).map((it: PurchaseItemDoc) => ({
+				name: it.name || null,
+				quantity: it.quantity || 0,
+				unitAmount: it.unitAmount ?? null,
+				priceId: it.priceId || null,
+				productId: it.productId || null,
+				image: null,
+			}));
+		}
+		return {
+			id: purchase.id,
+			status: purchase.status,
+			createdAt: purchase.createdAt,
+			amountTotal: purchase.amountTotal,
+			currency: purchase.currency,
+			items: enrichedItems,
+		};
+	} catch (e) {
+		console.error("[getPurchaseDetails]", e);
+		return { error: "Failed" };
+	}
+}

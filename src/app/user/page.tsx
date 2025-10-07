@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { auth, logout } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { ProfileEditor } from "@/ui/profile-editor.client";
+import { PurchasesGrid } from "@/ui/purchases-grid.client";
 
 export const dynamic = "force-dynamic"; // ensures cookie revalidation
 
@@ -96,91 +97,7 @@ export default async function UserPage(props: {
 								</p>
 							</div>
 						) : (
-							<div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-								{purchases.map((p) => {
-									const statusLower = p.status.toLowerCase();
-									const statusStyle: Record<string, string> = {
-										paid: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-										succeeded:
-											"bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-										unpaid: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
-										open: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
-										processing: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30",
-										refunded: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
-										canceled: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
-										default: "bg-muted text-muted-foreground border-border",
-									};
-									const iconStyle: Record<string, React.ReactNode> = {
-										paid: (
-											<span className="inline-block size-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.35)]" />
-										),
-										succeeded: (
-											<span className="inline-block size-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.35)]" />
-										),
-										unpaid: (
-											<span className="inline-block size-2 rounded-full bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.35)]" />
-										),
-										open: (
-											<span className="inline-block size-2 rounded-full bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.35)]" />
-										),
-										processing: (
-											<span className="inline-block size-2 rounded-full bg-sky-500 shadow-[0_0_0_3px_rgba(14,165,233,0.35)]" />
-										),
-										refunded: (
-											<span className="inline-block size-2 rounded-full bg-indigo-500 shadow-[0_0_0_3px_rgba(99,102,241,0.35)]" />
-										),
-										canceled: (
-											<span className="inline-block size-2 rounded-full bg-rose-500 shadow-[0_0_0_3px_rgba(244,63,94,0.35)]" />
-										),
-										default: <span className="inline-block size-2 rounded-full bg-muted-foreground/40" />,
-									};
-									const badgeCls = statusStyle[statusLower] || statusStyle.default;
-									return (
-										<div
-											key={p.id}
-											className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-background to-background/40 p-5 shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-primary/20"
-										>
-											<div className="flex items-start justify-between gap-3">
-												<div className="min-w-0 space-y-1">
-													<p className="truncate text-xs font-mono text-muted-foreground/70">{p.id}</p>
-													<p className="text-sm font-semibold tracking-tight">
-														{(p.amountTotal / 100).toLocaleString(undefined, {
-															style: "currency",
-															currency: p.currency,
-														})}
-													</p>
-												</div>
-												<span
-													className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide backdrop-blur-sm transition-colors ${badgeCls}`}
-												>
-													{iconStyle[statusLower] || iconStyle.default}
-													{statusLower}
-												</span>
-											</div>
-											<div className="mt-3 flex flex-col gap-2 text-xs text-muted-foreground">
-												<div>{new Date(p.createdAt).toLocaleString()}</div>
-												<div className="flex flex-wrap gap-1.5">
-													{p.items.slice(0, 4).map((it, idx2) => (
-														<span
-															key={idx2}
-															className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground group-hover:bg-muted/70"
-														>
-															{(it.name || it.priceId || "Item").slice(0, 22)}
-															{it.quantity > 1 && <span className="ml-1 opacity-70">×{it.quantity}</span>}
-														</span>
-													))}
-													{p.items.length > 4 && (
-														<span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground group-hover:bg-muted/70">
-															+{p.items.length - 4}
-														</span>
-													)}
-												</div>
-											</div>
-											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-black/0 transition group-hover:ring-black/5 dark:group-hover:ring-white/5" />
-										</div>
-									);
-								})}
-							</div>
+							<PurchasesGrid purchases={purchases} />
 						)}
 					</div>
 				);
