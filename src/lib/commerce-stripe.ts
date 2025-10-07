@@ -10,8 +10,6 @@ import type {
 } from "@/lib/commerce-types";
 import { slugify } from "@/lib/utils";
 
-// Basic in-memory cart store (ephemeral). In production you'd persist (DB, KV, etc.).
-// Keyed by cartId.
 const carts = new Map<string, Cart>();
 
 // Helper to ensure we have a Stripe client.
@@ -21,22 +19,59 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY || "", {
 	apiVersion: undefined,
 });
 
-// Stripe Product metadata fields expected (configure in Stripe dashboard per product):
-// - slug: string (custom URL slug; falls back to slugified product name then product id)
-// - category: string (used to build category slug & filter browse queries)
-// - stock: number as string ("0" means out of stock; if omitted -> unknown / unlimited)
+const toUpperCurrency = (currency?: string | null) =>
+	(currency || env.STRIPE_CURRENCY || "usd").toUpperCase();
+
+const parseStock = (value: string | null | undefined): number | undefined => {
+	if (!value) return undefined;
+	const parsed = Number.parseInt(value, 10);
+	return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const getVariantLabel = (product: Stripe.Product): string | undefined => {
+	const raw = product.metadata.variant;
+	if (!raw || typeof raw !== "string") return undefined;
+	const trimmed = raw.trim();
+	return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const getVariantSlug = (label?: string | null) => (label ? slugify(label) : null);
+
+const getVariantOrder = (product: Stripe.Product): number => {
+	const candidates = [product.metadata.variant_order, product.metadata.variantOrder, product.metadata.order];
+	for (const candidate of candidates) {
+		if (!candidate) continue;
+		const parsed = Number.parseFloat(candidate);
+		if (Number.isFinite(parsed)) {
+			return parsed;
+		}
+	}
+	return Number.MAX_SAFE_INTEGER;
+};
+
+const escapeSearchValue = (value: string) => value.replace(/['\\]/g, "\\$&");
+
 function mapStripeProduct(p: Stripe.Product, price: Stripe.Price | null): YnsProduct {
-	const currency = (price?.currency || env.STRIPE_CURRENCY || "usd").toUpperCase();
+	const currency = toUpperCurrency(price?.currency);
 	const unitAmount = price?.unit_amount ?? 0;
 	const images = p.images && p.images.length > 0 ? p.images : [];
 	const slug = (p.metadata.slug as string) || slugify(p.name) || p.id;
-	// Preserve semantic: if stock metadata missing => undefined (means don't show OOS badge)
-	// If provided and parsable => that number (0 => out of stock)
-	const stockMeta =
-		p.metadata.stock !== undefined && p.metadata.stock !== null && p.metadata.stock !== ""
-			? Number.parseInt(p.metadata.stock, 10)
-			: undefined;
+	const stock = parseStock(p.metadata.stock);
 	const categorySlug = p.metadata.category ? slugify(p.metadata.category) : undefined;
+	const variantLabel = getVariantLabel(p);
+	const variantSlug = getVariantSlug(variantLabel ?? undefined);
+
+	const variant: ProductVariant = {
+		id: price?.id || p.id,
+		price: unitAmount,
+		currency,
+		label: variantLabel ?? null,
+		slug: variantSlug,
+		productId: p.id,
+		description: (p.description || null) as string | null,
+		images,
+		stock: stock ?? null,
+	};
 
 	const product: YnsProduct = {
 		id: p.id,
@@ -46,14 +81,8 @@ function mapStripeProduct(p: Stripe.Product, price: Stripe.Price | null): YnsPro
 		summary: (p.description || null) as string | null,
 		price: unitAmount, // minor units
 		currency,
-		stock: Number.isFinite(stockMeta) ? stockMeta : undefined,
-		variants: [
-			{
-				id: price?.id || p.id,
-				price: unitAmount,
-				currency,
-			},
-		],
+		stock,
+		variants: [variant],
 		category: categorySlug ? { slug: categorySlug, name: p.metadata.category } : null,
 	};
 	return product;
@@ -66,23 +95,26 @@ async function getDefaultPrice(product: Stripe.Product): Promise<Stripe.Price | 
 	if (typeof product.default_price === "object" && product.default_price) {
 		return product.default_price as Stripe.Price;
 	}
-	// Fallback: find first active price
 	const prices = await stripe.prices.list({ product: product.id, active: true, limit: 1 });
 	return prices.data[0] || null;
 }
 
 export class StripeCommerce {
 	async product_get({ slug }: { slug: string }): Promise<Product | null> {
-		// Strategy: list products filtered by metadata.slug eq slug OR match id.
-		const products = await stripe.products.list({ active: true, limit: 100 });
-		for (const p of products.data) {
-			const pSlug = (p.metadata.slug as string) || slugify(p.name) || p.id;
-			if (pSlug === slug || p.id === slug) {
-				const price = await getDefaultPrice(p);
-				return mapStripeProduct(p, price);
-			}
+		const bySlug = await this.fetchProductsBySlug(slug);
+		if (bySlug.length > 0) {
+			return this.aggregateProducts(bySlug);
 		}
-		return null;
+
+		try {
+			const product = await stripe.products.retrieve(slug, { expand: ["default_price"] });
+			return this.aggregateProducts([product]);
+		} catch (error) {
+			if ((error as { statusCode?: number }).statusCode === 404) {
+				return null;
+			}
+			throw error;
+		}
 	}
 
 	async product_browse({
@@ -92,25 +124,131 @@ export class StripeCommerce {
 		first?: number;
 		category?: string;
 	}): Promise<BrowseResult<Product>> {
-		const all: Product[] = [];
-		// NOTE: Stripe product list API doesn't support server-side filtering by arbitrary metadata without search.
-		// For simplicity we fetch first N and filter client-side. If needed, migrate to product search API.
-		const products = await stripe.products.list({ active: true, limit: first });
-		for (const p of products.data) {
-			const price = await getDefaultPrice(p);
-			const mapped = mapStripeProduct(p, price);
+		const results: Product[] = [];
+		const rawProducts = await this.fetchProductsForBrowse(first, category);
+		const groups = this.groupProductsBySlug(rawProducts);
+		for (const group of groups) {
+			const aggregated = await this.aggregateProducts(group.products);
 			if (category) {
-				if (mapped.category?.slug === slugify(category)) {
-					all.push(mapped);
+				const expectedCategory = slugify(category);
+				if (aggregated.category?.slug !== expectedCategory) {
+					continue;
 				}
-			} else {
-				all.push(mapped);
+			}
+			results.push(aggregated);
+			if (results.length >= first) {
+				break;
 			}
 		}
-		return { data: all };
+		return { data: results };
 	}
 
-	// Cart API --------------------------------------------------------------
+	private async fetchProductsBySlug(slug: string): Promise<Stripe.Product[]> {
+		const query = `active:'true' AND metadata['slug']:'${escapeSearchValue(slug)}'`;
+		try {
+			const search = stripe.products.search({
+				query,
+				limit: 100,
+				expand: ["data.default_price"],
+			});
+			const results = await search.autoPagingToArray({ limit: 100 });
+			return results;
+		} catch (error) {
+			// Search may not be available on all Stripe plans; fall back to list filtering.
+			const list = await stripe.products.list({ active: true, limit: 100 });
+			return list.data.filter((product) => {
+				const productSlug = (product.metadata.slug as string) || slugify(product.name) || product.id;
+				return productSlug === slug;
+			});
+		}
+	}
+
+	private async fetchProductsForBrowse(first: number, category?: string): Promise<Stripe.Product[]> {
+		const limit = Math.min(Math.max(first * 5, first), 100);
+		const queryParts = ["active:'true'"];
+		if (category) {
+			queryParts.push(`metadata['category']:'${escapeSearchValue(category)}'`);
+		}
+		const query = queryParts.join(" AND ");
+		try {
+			const search = stripe.products.search({
+				query,
+				limit,
+				expand: ["data.default_price"],
+			});
+			const results = await search.autoPagingToArray({ limit });
+			return results;
+		} catch {
+			const list = stripe.products.list({ active: true, limit });
+			const results = await list.autoPagingToArray({ limit });
+			if (!category) {
+				return results;
+			}
+			return results.filter((product) => {
+				const productCategory = product.metadata.category ? slugify(product.metadata.category) : undefined;
+				return productCategory === slugify(category);
+			});
+		}
+	}
+
+	private groupProductsBySlug(products: Stripe.Product[]) {
+		const groups = new Map<string, { slug: string; products: Stripe.Product[] }>();
+		for (const product of products) {
+			const slug = (product.metadata.slug as string) || slugify(product.name) || product.id;
+			let entry = groups.get(slug);
+			if (!entry) {
+				entry = { slug, products: [] };
+				groups.set(slug, entry);
+			}
+			entry.products.push(product);
+		}
+		return Array.from(groups.values());
+	}
+
+	private async aggregateProducts(products: Stripe.Product[]): Promise<YnsProduct> {
+		const enriched = await Promise.all(
+			products.map(async (product) => {
+				const price = await getDefaultPrice(product);
+				const mapped = mapStripeProduct(product, price);
+				return { mapped, product };
+			}),
+		);
+
+		enriched.sort((a, b) => {
+			const orderDiff = getVariantOrder(a.product) - getVariantOrder(b.product);
+			if (orderDiff !== 0) return orderDiff;
+			const labelA = a.mapped.variants[0]?.label ?? "";
+			const labelB = b.mapped.variants[0]?.label ?? "";
+			return labelA.localeCompare(labelB, undefined, { sensitivity: "base" });
+		});
+
+		const base = enriched[0]?.mapped;
+		if (!base) {
+			throw new Error("Cannot aggregate empty product group");
+		}
+
+		const variants = enriched
+			.map((entry) => entry.mapped.variants[0])
+			.filter((variant): variant is ProductVariant => Boolean(variant));
+		if (variants.length > 0) {
+			base.variants = variants;
+			const primary = variants[0]!;
+			base.price = primary.price;
+			base.currency = primary.currency;
+			if (primary.description) {
+				base.summary = primary.description;
+			}
+			if (primary.images && primary.images.length > 0) {
+				base.images = primary.images;
+			}
+			if (typeof primary.stock === "number") {
+				base.stock = primary.stock;
+			}
+		}
+
+		return base;
+	}
+
 	private ensureCart(cartId?: string, currency = env.STRIPE_CURRENCY || "USD"): Cart {
 		if (cartId && carts.has(cartId)) {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -169,7 +307,6 @@ export class StripeCommerce {
 		} else {
 			const line = cart.items.find((i) => i.variantId === variantId);
 			if (!line) {
-				// If not exists treat as add.
 				return this.cart_add({ cartId, variantId, quantity });
 			}
 			line.quantity = quantity;
@@ -197,9 +334,7 @@ export class StripeCommerce {
 		return { id: p.id, name: p.name, images: p.images, summary: p.summary };
 	}
 
-	private async lookupVariant(
-		variantOrProductId: string,
-	): Promise<{ product: Product; variant: ProductVariant }> {
+	async lookupVariant(variantOrProductId: string): Promise<{ product: Product; variant: ProductVariant }> {
 		// We treat variant id as either a Price id or Product id; attempt price first.
 		try {
 			const price = await stripe.prices.retrieve(variantOrProductId);
@@ -228,6 +363,9 @@ export const commerce = {
 	product: {
 		get: (args: { slug: string }) => new StripeCommerce().product_get(args),
 		browse: (args: { first?: number; category?: string }) => new StripeCommerce().product_browse(args),
+	},
+	variant: {
+		resolve: (args: { id: string }) => new StripeCommerce().lookupVariant(args.id),
 	},
 	cart: {
 		get: (args: { cartId: string }) => new StripeCommerce().cart_get(args),

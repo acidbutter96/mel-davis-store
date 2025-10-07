@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
 	createContext,
 	type ReactNode,
@@ -9,12 +10,7 @@ import {
 	useOptimistic,
 	useState,
 } from "react";
-import {
-	addToCartAction,
-	getCartAction,
-	removeFromCartAction,
-	updateCartItemAction,
-} from "@/actions/cart-actions";
+import { addToCartAction, removeFromCartAction, updateCartItemAction } from "@/actions/cart-actions";
 import type { Cart, ProductInfo } from "@/lib/commerce-types";
 
 type CartAction =
@@ -32,13 +28,15 @@ interface CartContextType {
 	optimisticAdd: (variantId: string, quantity: number, product?: ProductInfo) => Promise<void>;
 	optimisticUpdate: (variantId: string, quantity: number) => Promise<void>;
 	optimisticRemove: (variantId: string) => Promise<void>;
+	cartReady: boolean;
+	// Force a fresh fetch of the cart from the server
+	refreshCart: () => Promise<void>;
 }
 
 function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 	switch (action.type) {
 		case "ADD_ITEM": {
 			if (!state) {
-				// Create a new cart if none exists
 				return {
 					id: "optimistic",
 					items: [
@@ -47,7 +45,7 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 							productId: action.variantId,
 							variantId: action.variantId,
 							quantity: action.quantity,
-							price: 0, // Will be updated from server
+							price: 0,
 							product: action.product,
 						},
 					],
@@ -56,13 +54,11 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 				};
 			}
 
-			// Check if item already exists
 			const existingItemIndex = state.items.findIndex(
 				(item) => (item.variantId || item.productId) === action.variantId,
 			);
 
 			if (existingItemIndex >= 0) {
-				// Update existing item
 				const existingItem = state.items[existingItemIndex];
 				if (existingItem) {
 					const updatedItems = [...state.items];
@@ -77,7 +73,6 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 				}
 			}
 
-			// Add new item
 			return {
 				...state,
 				items: [
@@ -87,7 +82,7 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 						productId: action.variantId,
 						variantId: action.variantId,
 						quantity: action.quantity,
-						price: 0, // Will be updated from server
+						price: 0,
 						product: action.product,
 					},
 				],
@@ -98,7 +93,6 @@ function cartReducer(state: Cart | null, action: CartAction): Cart | null {
 			if (!state) return state;
 
 			if (action.quantity <= 0) {
-				// Remove item if quantity is 0 or less
 				return {
 					...state,
 					items: state.items.filter((item) => (item.variantId || item.productId) !== action.variantId),
@@ -142,23 +136,69 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	const [actualCart, setActualCart] = useState<Cart | null>(null);
 	const [optimisticCart, setOptimisticCart] = useOptimistic(actualCart, cartReducer);
 	const [isCartOpen, setIsCartOpen] = useState(false);
+	const [cartReady, setCartReady] = useState(false);
 
 	// Calculate item count from optimistic cart
 	const itemCount = optimisticCart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
+	// Helper to fetch cart via API (reads go through GET endpoint to ensure fresh data)
+	async function fetchCart(): Promise<Cart | null> {
+		try {
+			const res = await fetch("/api/cart", { method: "GET", cache: "no-store" });
+			if (!res.ok) return null;
+			const data = (await res.json()) as { cart: Cart | null };
+			return data.cart;
+		} catch (e) {
+			console.error("Failed to fetch cart", e);
+			return null;
+		}
+	}
+
+	// Expose a stable refresh function to re-fetch the cart and update state
+	const refreshCart = async () => {
+		try {
+			const cart = await fetchCart();
+			startTransition(() => setActualCart(cart));
+		} catch (e) {
+			console.error("Failed to refresh cart", e);
+		}
+	};
+
 	// Load initial cart
 	useEffect(() => {
-		// Inicialização do carrinho dentro de startTransition para evitar warning de atualização otimista
-		getCartAction().then((cart) => {
-			startTransition(() => {
-				setActualCart(cart);
+		fetchCart()
+			.then((cart) => {
+				startTransition(() => {
+					setActualCart(cart);
+				});
+			})
+			.finally(() => {
+				setCartReady(true);
 			});
-		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Re-fetch cart when returning from checkout (query params change)
+	const searchParams = useSearchParams();
+	useEffect(() => {
+		const status = searchParams?.get("checkout");
+		const sessionId = searchParams?.get("session_id");
+		if (!status || !sessionId) return;
+		const v = status.toLowerCase();
+		if (v === "success" || v === "processing") {
+			fetchCart()
+				.then((cart) => {
+					startTransition(() => setActualCart(cart));
+				})
+				.catch(() => {});
+		}
+		// searchParams is a special object that changes identity when query updates
+	}, [searchParams]);
+
+	// (no additional effects) initial cart load is handled above
 
 	// Sync optimistic cart with actual cart when it changes
 	useEffect(() => {
-		if (actualCart === optimisticCart) return; // evita transições redundantes
 		startTransition(() => {
 			setOptimisticCart({ type: "SYNC_CART", cart: actualCart });
 		});
@@ -168,17 +208,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	const closeCart = () => setIsCartOpen(false);
 
 	const optimisticAdd = async (variantId: string, quantity = 1, product?: ProductInfo) => {
-		// Optimistic update dentro de startTransition para cumprir regras do React 19
 		startTransition(() => {
 			setOptimisticCart({ type: "ADD_ITEM", variantId, quantity, product });
+			setIsCartOpen(true);
 		});
-
 		try {
-			// Perform server action
 			const updatedCart = await addToCartAction(variantId, quantity);
 			setActualCart(updatedCart);
+			// Force a fresh fetch (enrichment + migration) from API
+			const refreshed = await fetchCart();
+			if (refreshed) setActualCart(refreshed);
 		} catch (error) {
-			// Rollback will happen automatically via useEffect
 			console.error("Failed to add to cart:", error);
 			throw error;
 		}
@@ -227,6 +267,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 				optimisticAdd,
 				optimisticUpdate,
 				optimisticRemove,
+				cartReady,
+				refreshCart,
 			}}
 		>
 			{children}

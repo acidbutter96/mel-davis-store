@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: yournextstore-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: yournextstore
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Opcional: serviço da app se quiser orquestrar junto
+  # app:
+  #   build: .
+  #   depends_on:
+  #     mongo:
+  #       condition: service_healthy
+  #   environment:
+  #     MONGODB_URI: mongodb://mongo:27017
+  #     MONGODB_DB_NAME: yournextstore
+  #     STRIPE_CURRENCY: usd
+  #     NEXT_PUBLIC_URL: http://localhost:3000
+  #     JWT_SECRET: dev_super_secret_change_me_please_123456
+  #   ports:
+  #     - "3000:3000"
+
+volumes:
+  mongo_data:
+    driver: local

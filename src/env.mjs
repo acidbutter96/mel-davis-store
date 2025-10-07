@@ -5,9 +5,7 @@ import { z } from "zod";
 
 export const env = createEnv({
 	server: {
-		// Can be provided via env or parameters to Commerce Kit, thus optional
 		STRIPE_SECRET_KEY: z.string().optional(),
-		// Required in Commerce Kit
 		STRIPE_CURRENCY: z.string(),
 		STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
@@ -15,9 +13,14 @@ export const env = createEnv({
 			.string()
 			.optional()
 			.transform((str) => !!str),
+		MONGODB_URI: z
+			.string()
+			.min(1)
+			.regex(/^mongodb(\+srv)?:\/\//, "MONGODB_URI must start with mongodb:// or mongodb+srv://"),
+		MONGODB_DB_NAME: z.string(),
+		JWT_SECRET: z.string().min(32),
 	},
 	client: {
-		// Can be provided via env or parameters to Commerce Kit, thus optional
 		NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 		NEXT_PUBLIC_URL: z.string().url().optional(),
 
@@ -40,6 +43,9 @@ export const env = createEnv({
 		ENABLE_STRIPE_TAX: process.env.ENABLE_STRIPE_TAX,
 
 		NEXT_PUBLIC_LANGUAGE: process.env.NEXT_PUBLIC_LANGUAGE,
+		MONGODB_URI: process.env.MONGODB_URI,
+		MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
+		JWT_SECRET: process.env.JWT_SECRET,
 	},
 });
 
@@ -54,6 +60,5 @@ if (!publicUrl) {
 	throw new Error("Missing NEXT_PUBLIC_URL or NEXT_PUBLIC_VERCEL_URL variables!");
 }
 
-// force type inference to string
 const _publicUrl = publicUrl;
 export { _publicUrl as publicUrl };
