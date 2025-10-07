@@ -126,7 +126,7 @@ export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
 							type="button"
 							key={p.id}
 							onClick={() => openDetails(p.id)}
-							className="text-left group relative overflow-hidden rounded-xl border bg-gradient-to-br from-background to-background/40 p-5 shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-primary/20"
+							className="cursor-pointer text-left group relative overflow-hidden rounded-xl border bg-gradient-to-br from-background to-background/40 p-5 shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-primary/20"
 						>
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0 space-y-1">
