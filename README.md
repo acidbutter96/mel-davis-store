@@ -211,6 +211,22 @@ If an error occurs (e.g., invalid price), a message appears in the cart.
 > [!TIP]
 > If every product shows as "Out of stock", make sure you only set `stock` when you want to control inventory. Remove the metadata or leave it empty for products with "unlimited" / untracked stock; use `stock=0` only when it's truly unavailable.
 
+### Guest cart merge on signup / login
+
+When a visitor browses logged out, their cart is stored in a secure, httpOnly cookie plus an ephemeral in‑memory map on the server (see `cart-actions` + `cart-cookies`). Once they authenticate (signup or login) the application will automatically attempt a one‑time merge:
+
+- Any existing saved cart on the user document is combined with the guest cart.
+- Quantities for identical `variantId` are summed.
+- Zero or negative quantities are discarded defensively.
+- The guest cart (cookie + in‑memory) is cleared after a successful merge.
+
+Implementation details:
+- Server action `mergeGuestCartIntoUser` performs the merge and enrichment.
+- API route `POST /api/cart/merge` calls the server action if the user is authenticated.
+- Client component `CartMergeOnAuth` (mounted in the store layout) fires a background request after hydration to trigger the merge exactly once.
+
+This keeps UX seamless: items added before creating an account are preserved for the new user. If you need to disable it, remove the `CartMergeOnAuth` component from the layout.
+
 ## Variants
 
 Your Next Store supports simple product variants. To create a product with variants, you must add multiple products to Stripe with the same `slug` metadata field. YNS uses the `variant` metadata field to distinguish between different variants of the same product. For example, if you have a T-shirt in multiple sizes, you can create three products with the `slug` of `t-shirt` and `variant` values of `small`, `medium`, and `large`.

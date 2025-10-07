@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCart } from "@/context/cart-context";
 import { login } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PasswordInput } from "@/ui/shadcn/password-input";
@@ -17,6 +18,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 	const [mode, setMode] = useState<"login" | "register">("login");
 	const [pending, startTransition] = useTransition();
 	const [registerError, setRegisterError] = useState<string | null>(null);
+	const { cart, cartReady } = useCart();
 
 	// handle client-side registration submission
 	async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
@@ -27,6 +29,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 		const base: Record<string, unknown> = {};
 		const address: Record<string, string> = {};
 		for (const [key, value] of rawEntries) {
+			if (key.startsWith("$ACTION")) continue;
 			if (key.startsWith("address.")) {
 				const subKey = key.slice("address.".length);
 				if (value.trim() !== "") address[subKey] = value.trim();
@@ -34,8 +37,50 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 				base[key] = value;
 			}
 		}
+
+		console.log(cart);
+
 		if (Object.keys(address).length > 0) base.address = address;
-		const payload = base;
+
+		// Wait briefly for cartReady (context hydration) if not ready yet
+		if (!cartReady) {
+			const started = Date.now();
+			while (!cartReady && Date.now() - started < 300) {
+				// eslint-disable-next-line no-await-in-loop
+				await new Promise((r) => setTimeout(r, 30));
+			}
+		}
+		let effectiveCart = cart;
+		if (effectiveCart && effectiveCart.items.length > 0) {
+			console.debug("[register] using context cart", effectiveCart.items.length);
+		} else {
+			try {
+				const guestRes = await fetch("/api/cart", { method: "GET", cache: "no-store" });
+				if (guestRes.ok) {
+					const guestData = (await guestRes.json()) as {
+						cart?: { items?: { productId: string; variantId: string; quantity: number }[] };
+					};
+					if (guestData.cart?.items?.length) {
+						effectiveCart = guestData.cart as typeof effectiveCart;
+						console.debug("[register] using fallback guest cart", guestData.cart.items?.length || 0);
+					}
+				}
+			} catch (err) {
+				console.debug("[register] guest cart fetch failed", err);
+			}
+		}
+		if (effectiveCart && effectiveCart.items.length > 0) {
+			(base as Record<string, unknown>).cart = {
+				items: effectiveCart.items.map((i) => ({
+					productId: i.productId,
+					variantId: i.variantId,
+					quantity: i.quantity,
+				})),
+			};
+		} else {
+			console.debug("[register] no cart items to send");
+		}
+		const payload = base; // agora possivelmente inclui cartItems
 		try {
 			const res = await fetch("/api/auth/register", {
 				method: "POST",
@@ -87,6 +132,19 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 				<CardContent>
 					{mode === "login" ? (
 						<form action={action}>
+							{cart && cart.items.length > 0 && (
+								<input
+									type="hidden"
+									name="cart"
+									value={JSON.stringify({
+										items: cart.items.map((i) => ({
+											productId: i.productId,
+											variantId: i.variantId,
+											quantity: i.quantity,
+										})),
+									})}
+								/>
+							)}
 							<div className="grid gap-6">
 								{state?.error && (
 									<p className="text-sm rounded-md bg-destructive/10 text-destructive px-3 py-2 border border-destructive/30">

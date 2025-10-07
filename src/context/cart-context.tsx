@@ -27,6 +27,7 @@ interface CartContextType {
 	optimisticAdd: (variantId: string, quantity: number, product?: ProductInfo) => Promise<void>;
 	optimisticUpdate: (variantId: string, quantity: number) => Promise<void>;
 	optimisticRemove: (variantId: string) => Promise<void>;
+	cartReady: boolean;
 }
 
 function cartReducer(state: Cart | null, action: CartAction): Cart | null {
@@ -132,6 +133,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	const [actualCart, setActualCart] = useState<Cart | null>(null);
 	const [optimisticCart, setOptimisticCart] = useOptimistic(actualCart, cartReducer);
 	const [isCartOpen, setIsCartOpen] = useState(false);
+	const [cartReady, setCartReady] = useState(false);
 
 	// Calculate item count from optimistic cart
 	const itemCount = optimisticCart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
@@ -151,11 +153,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 	// Load initial cart
 	useEffect(() => {
-		fetchCart().then((cart) => {
-			startTransition(() => {
-				setActualCart(cart);
+		fetchCart()
+			.then((cart) => {
+				startTransition(() => {
+					setActualCart(cart);
+				});
+			})
+			.finally(() => {
+				setCartReady(true);
 			});
-		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
@@ -230,6 +236,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 				optimisticAdd,
 				optimisticUpdate,
 				optimisticRemove,
+				cartReady,
 			}}
 		>
 			{children}

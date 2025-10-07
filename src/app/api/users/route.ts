@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/api-auth";
+import { clearCartId, getCartCookieItems, getCartId } from "@/lib/cart-cookies";
+import { commerce } from "@/lib/commerce-stripe";
 import { ensureIndexes, getDb } from "@/lib/mongodb";
 
 const createUserSchema = z.object({
@@ -43,14 +45,66 @@ export async function POST(req: NextRequest) {
 
 		const now = new Date();
 		const passwordHash = await bcrypt.hash(data.password, 10);
+
+		let guestCartItems: { productId: string; variantId: string; quantity: number }[] | undefined;
+		const aggregated = new Map<string, { productId: string; variantId: string; quantity: number }>();
+		const cookieItems = await getCartCookieItems();
+		if (cookieItems && cookieItems.length > 0) {
+			for (const item of cookieItems) {
+				if (!item) continue;
+				const key = item.variantId;
+				const current = aggregated.get(key);
+				if (current) current.quantity += item.quantity;
+				else aggregated.set(key, { ...item });
+			}
+		}
+		try {
+			const cartId = await getCartId();
+			if (cartId) {
+				const guestCart = commerce.cart.get({ cartId });
+				if (guestCart && guestCart.items.length > 0) {
+					for (const line of guestCart.items) {
+						const key = line.variantId;
+						const current = aggregated.get(key);
+						if (current) current.quantity += line.quantity;
+						else
+							aggregated.set(key, {
+								productId: line.productId,
+								variantId: line.variantId,
+								quantity: line.quantity,
+							});
+					}
+				}
+			}
+		} catch (e) {
+			console.warn("[admin user create] Failed to read guest cart", e);
+		}
+		if (aggregated.size > 0) {
+			guestCartItems = Array.from(aggregated.values());
+		}
+
 		const userDoc = {
 			email: data.email.toLowerCase(),
 			name: data.name,
 			passwordHash,
+			cart: guestCartItems ? { items: guestCartItems } : undefined,
 			createdAt: now,
 			updatedAt: now,
 		};
 		const result = await db.collection("users").insertOne(userDoc);
+
+		// Clear guest cart after successful user creation
+		try {
+			const cartId = await getCartId();
+			if (cartId) {
+				try {
+					await commerce.cart.clear({ cartId });
+				} catch {}
+				await clearCartId();
+			}
+		} catch (e) {
+			console.warn("[admin user create] Failed to clear guest cart", e);
+		}
 		return new Response(
 			JSON.stringify({
 				_id: result.insertedId.toString(),

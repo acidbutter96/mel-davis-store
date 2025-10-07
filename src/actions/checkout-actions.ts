@@ -32,6 +32,49 @@ export async function createCheckoutSession(): Promise<
 	);
 	const minimal = user?.cart?.items || [];
 	if (minimal.length === 0) {
+		// Fallback: attempt to import cookie cart (guest cart) on first checkout after signup/login
+		try {
+			const { getCartId, clearCartId, getCartCookieItems } = await import("@/lib/cart-cookies");
+			const [cartId, cookieItems] = await Promise.all([getCartId(), getCartCookieItems()]);
+			const aggregated = new Map<string, { productId: string; variantId: string; quantity: number }>();
+			if (cookieItems && cookieItems.length > 0) {
+				for (const item of cookieItems) {
+					const key = item.variantId;
+					const current = aggregated.get(key);
+					if (current) current.quantity += item.quantity;
+					else aggregated.set(key, { ...item });
+				}
+			}
+			if (cartId) {
+				const guestCart = commerce.cart.get({ cartId });
+				if (guestCart && guestCart.items.length > 0) {
+					for (const line of guestCart.items) {
+						const key = line.variantId;
+						const current = aggregated.get(key);
+						if (current) current.quantity += line.quantity;
+						else
+							aggregated.set(key, {
+								productId: line.productId,
+								variantId: line.variantId,
+								quantity: line.quantity,
+							});
+					}
+				}
+			}
+			if (aggregated.size > 0) {
+				const mergedItems = Array.from(aggregated.values());
+				await db
+					.collection("users")
+					.updateOne(
+						{ _id: new ObjectId(userId) },
+						{ $set: { cart: { items: mergedItems }, updatedAt: new Date() } },
+					);
+				await clearCartId();
+				return await createCheckoutSession();
+			}
+		} catch (e) {
+			console.warn("Guest cart fallback import failed", e);
+		}
 		return { error: "Empty cart" };
 	}
 

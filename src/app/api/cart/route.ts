@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { env } from "@/env.mjs";
 import { getUserIdFromAuthHeader } from "@/lib/api-auth-helpers";
+import { getCartCookieItems, getCartId } from "@/lib/cart-cookies";
 import { commerce } from "@/lib/commerce-stripe";
 import type { Cart } from "@/lib/commerce-types";
 import { getDb } from "@/lib/mongodb";
@@ -52,7 +53,39 @@ async function enrich(
 export async function GET() {
 	try {
 		const userId = await getAuthenticatedUserId();
-		if (!userId) return NextResponse.json({ cart: null }, { status: 200 });
+
+		if (!userId) {
+			// Fallback: guest cart (cookie)
+			try {
+				const [cookieCartId, cookieItems] = await Promise.all([getCartId(), getCartCookieItems()]);
+				if (cookieCartId) {
+					const guestCart = commerce.cart.get({ cartId: cookieCartId });
+					if (guestCart) {
+						return NextResponse.json({ cart: guestCart });
+					}
+				}
+				if (cookieItems && cookieItems.length > 0) {
+					const enriched = await enrich(cookieItems);
+					return NextResponse.json({
+						cart: {
+							id: cookieCartId || "guest-cookie",
+							...enriched,
+						},
+					});
+				}
+			} catch (e) {
+				console.warn("[cart][guest] erro ao obter carrinho guest", e);
+			}
+			// Sem usuário e sem carrinho: retorna vazio consistente
+			return NextResponse.json({
+				cart: {
+					id: "guest-empty",
+					items: [],
+					total: 0,
+					currency: (env.STRIPE_CURRENCY || "USD").toUpperCase(),
+				},
+			});
+		}
 
 		const db = await getDb();
 		const { ObjectId } = await import("mongodb");
@@ -66,6 +99,7 @@ export async function GET() {
 		if (minimal.length === 0) {
 			return NextResponse.json({
 				cart: {
+					id: `user-${userId}-empty`,
 					items: [],
 					total: 0,
 					currency: (env.STRIPE_CURRENCY || "USD").toUpperCase(),
@@ -73,9 +107,7 @@ export async function GET() {
 			});
 		}
 		const enriched = await enrich(minimal);
-
-		console.log(enriched);
-		return NextResponse.json({ cart: enriched });
+		return NextResponse.json({ cart: { id: `user-${userId}`, ...enriched } });
 	} catch (error) {
 		console.error("GET /api/cart error", error);
 		return NextResponse.json({ error: "Failed to load cart" }, { status: 500 });
