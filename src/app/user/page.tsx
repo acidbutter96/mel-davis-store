@@ -11,11 +11,7 @@ export const dynamic = "force-dynamic"; // ensures cookie revalidation
 
 type UserPageSearchParams = { section?: string };
 
-export default async function UserPage({
-	searchParams,
-}: {
-	searchParams?: Promise<UserPageSearchParams>;
-}) {
+export default async function UserPage({ searchParams }: { searchParams?: Promise<UserPageSearchParams> }) {
 	const resolvedSearchParams = (searchParams ? await searchParams : {}) as UserPageSearchParams;
 	const session = await auth();
 	if (!session) return redirect("/login");

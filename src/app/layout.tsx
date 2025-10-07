@@ -1,9 +1,9 @@
 import "@/app/globals.css";
-import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Suspense } from "react";
 import { CheckoutSuccessHandler } from "@/components/checkout-success-handler.client";
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/context/cart-context";
@@ -28,17 +28,17 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 		<html lang={locale} className="h-full antialiased">
 			<body className="flex min-h-full flex-col">
 				<IntlClientProvider messages={messages} locale={locale}>
-						<Suspense fallback={null}>
-							<CartProvider>
-								<Suspense fallback={null}>
-									<CheckoutSuccessHandler />
-								</Suspense>
-								<div className="flex min-h-full flex-1 flex-col bg-white" vaul-drawer-wrapper="">
-									{children}
-								</div>
-								<Toaster position="top-center" offset={10} />
-							</CartProvider>
-						</Suspense>
+					<Suspense fallback={null}>
+						<CartProvider>
+							<Suspense fallback={null}>
+								<CheckoutSuccessHandler />
+							</Suspense>
+							<div className="flex min-h-full flex-1 flex-col bg-white" vaul-drawer-wrapper="">
+								{children}
+							</div>
+							<Toaster position="top-center" offset={10} />
+						</CartProvider>
+					</Suspense>
 				</IntlClientProvider>
 				{env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
 					<Script
