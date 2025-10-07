@@ -101,7 +101,7 @@ export async function login(_state: unknown, formData: FormData): Promise<{ erro
 			console.debug("[login] no cart override");
 		}
 		await createPersistentSession({ id: String(user._id), email: user.email, name: user.name });
-		redirect("/user");
+		redirect("/");
 	} catch (err: unknown) {
 		if (
 			err &&

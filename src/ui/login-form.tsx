@@ -80,7 +80,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 		} else {
 			console.debug("[register] no cart items to send");
 		}
-		const payload = base; // agora possivelmente inclui cartItems
+		const payload = base;
 		try {
 			const res = await fetch("/api/auth/register", {
 				method: "POST",
@@ -97,7 +97,6 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 				}
 				return;
 			}
-			// success: auto-login (cookies already set by the API). Handle special checkout flow
 			if (next === "checkout") {
 				startTransition(async () => {
 					const c = await fetch("/api/checkout/session", { method: "POST" });
@@ -112,8 +111,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 				});
 				return;
 			}
-			// Redirect to /user to show dashboard
-			router.push("/user");
+			router.push("/");
 		} catch (err) {
 			console.error("register failed", err);
 			setRegisterError("Unexpected error. Please try again.");
