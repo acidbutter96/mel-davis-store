@@ -54,6 +54,8 @@ export async function GET(req: NextRequest) {
 
 		const status = deriveCheckoutStatus(session);
 
+		console.log(session);
+
 		return NextResponse.redirect(
 			buildRedirectUrl(redirectBase, {
 				[REDIRECT_PARAM]: status,

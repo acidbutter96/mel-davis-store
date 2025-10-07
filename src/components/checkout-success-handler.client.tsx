@@ -37,16 +37,18 @@ export function CheckoutSuccessHandler() {
 		(async () => {
 			try {
 				if (successLikeStatuses.includes(status)) {
+					if (sessionId) {
+						try {
+							await recordSuccessfulCheckout(sessionId);
+						} catch (e) {
+							console.warn("Failed to record purchase locally", e);
+						}
+					}
+
 					const res = await finalizeCheckoutCleanup();
+
 					if ("ok" in res) {
 						closeCart();
-						if (sessionId) {
-							try {
-								await recordSuccessfulCheckout(sessionId);
-							} catch (e) {
-								console.warn("Failed to record purchase locally", e);
-							}
-						}
 					}
 				}
 				showToast(message);

@@ -146,6 +146,12 @@ export async function ensureIndexes() {
 
 export type WithId<T> = T & { _id: string };
 
+export type UserCartItem = { productId: string; variantId: string; quantity: number };
+
+export interface UserCart {
+	items: Array<UserCartItem>;
+}
+
 export interface UserDoc {
 	_id?: string;
 	email: string;
@@ -160,7 +166,7 @@ export interface UserDoc {
 		country?: string;
 	};
 	passwordHash?: string; // password hash
-	cart?: { items: Array<{ productId: string; variantId: string; quantity: number }> };
+	cart?: UserCart;
 	purchases?: Array<{
 		id: string;
 		createdAt: Date;
@@ -176,6 +182,7 @@ export interface UserDoc {
 		}>;
 		invoiceId?: string | null;
 		paymentIntentId?: string | null;
+		cart?: UserCart | null;
 	}>;
 	createdAt: Date;
 	updatedAt: Date;

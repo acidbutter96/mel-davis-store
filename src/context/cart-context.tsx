@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
 	createContext,
 	type ReactNode,
@@ -164,6 +165,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
 			});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Re-fetch cart when returning from checkout (query params change)
+	const searchParams = useSearchParams();
+	useEffect(() => {
+		const status = searchParams?.get("checkout");
+		const sessionId = searchParams?.get("session_id");
+		if (!status || !sessionId) return;
+		const v = status.toLowerCase();
+		if (v === "success" || v === "processing") {
+			fetchCart()
+				.then((cart) => {
+					startTransition(() => setActualCart(cart));
+				})
+				.catch(() => {});
+		}
+		// searchParams is a special object that changes identity when query updates
+	}, [searchParams]);
+
+	// (no additional effects) initial cart load is handled above
 
 	// Sync optimistic cart with actual cart when it changes
 	useEffect(() => {
