@@ -9,10 +9,14 @@ import { PurchasesGrid } from "@/ui/purchases-grid.client";
 
 export const dynamic = "force-dynamic"; // ensures cookie revalidation
 
-export default async function UserPage(props: {
-	searchParams: Promise<{ section?: string }> | { section?: string };
+type UserPageSearchParams = { section?: string };
+
+export default async function UserPage({
+	searchParams,
+}: {
+	searchParams?: Promise<UserPageSearchParams>;
 }) {
-	const resolvedSearchParams = "then" in props.searchParams ? await props.searchParams : props.searchParams;
+	const resolvedSearchParams = (searchParams ? await searchParams : {}) as UserPageSearchParams;
 	const session = await auth();
 	if (!session) return redirect("/login");
 	const { user } = session;
