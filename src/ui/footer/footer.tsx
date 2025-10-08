@@ -72,33 +72,31 @@ export async function Footer() {
 			</div>
 
 			<div className="container mt-8 flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-neutral-500 md:flex-row">
-				<div className="flex items-center relative w-full md:w-2/3">
-					<div className="w-full md:max-w-lg">
-						<p className="flex flex-wrap items-center gap-2 font-medium font-['Roboto',sans-serif] mb-1">
-							<span>Copyright &copy; {year}. DevButter All Rights Reserved. | Developed By</span>
-							<a
-								href="https://devbutter.tech/"
-								target="_blank"
-								rel="noopener noreferrer"
-								className="inline-flex items-center gap-1 transition-colors hover:text-neutral-700"
-								aria-label="Open DevButter site in a new tab"
-							>
-								<Image
-									src="/images/icons/devbutter.svg"
-									width={24}
-									height={24}
-									alt="DevButter"
-									className="h-6 w-6 object-contain"
-								/>
-								<span className="sr-only">DevButter</span>
-							</a>
-						</p>
-					</div>
+				<div className="hidden lg:block order-1 w-full md:w-auto md:max-w-lg">
+					<p className="font-medium font-['Roboto',sans-serif] text-center md:text-left flex items-center">
+						<span>Copyright &copy; {year} All Rights Reserved. | Developed By</span>
+						<a
+							className="inline-flex items-center ml-1 hover:text-neutral-700 transition-colors"
+							href="https://devbutter.tech/"
+							target="_blank"
+							rel="noopener noreferrer"
+							aria-label="DevButter site"
+						>
+							<Image
+								src="/images/icons/devbutter.svg"
+								alt="DevButter"
+								width={18}
+								height={18}
+								className="h-[18px] w-[18px] object-contain"
+							/>
+							<span className="sr-only">DevButter</span>
+						</a>
+					</p>
 				</div>
 
-				<div className="flex items-center gap-4 w-full md:w-auto md:justify-end">
+				<div className="order-2 flex w-full items-center justify-center lg:order-3 md:w-auto md:justify-end">
 					<ul
-						className="flex items-center gap-4 flex-wrap md:flex-nowrap whitespace-nowrap"
+						className="flex flex-wrap items-center justify-center gap-4 md:flex-nowrap md:justify-end whitespace-nowrap"
 						aria-label="Accepted payment methods"
 					>
 						{paymentIcons.map((icon) => (
@@ -116,6 +114,28 @@ export async function Footer() {
 							</li>
 						))}
 					</ul>
+				</div>
+
+				<div className="order-3 flex items-center lg:order-2 lg:hidden">
+					<a
+						href="https://devbutter.tech/"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="inline-flex items-center gap-2 transition-colors hover:text-neutral-700"
+						aria-label="Open DevButter site in a new tab"
+					>
+						<span className="text-xs uppercase tracking-wide lg:hidden">
+							Copyright &copy; {year}. DevButter
+						</span>
+						<Image
+							src="/images/icons/devbutter.svg"
+							width={24}
+							height={24}
+							alt="DevButter"
+							className="h-6 w-6 object-contain"
+						/>
+						<span className="sr-only">DevButter</span>
+					</a>
 				</div>
 			</div>
 		</footer>
