@@ -193,7 +193,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 									}
 								}}
 								disabled={loading || !cart || cart.items.length === 0}
-								className="psychedelic-button w-full px-6 py-3 text-base font-semibold uppercase"
+								className="w-full rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
 							>
 								{loading ? "Creating session..." : "Checkout"}
 							</button>

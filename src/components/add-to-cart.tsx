@@ -2,8 +2,6 @@
 
 import { Plus } from "lucide-react";
 import { useCart } from "@/context/cart-context";
-import { cn } from "@/lib/utils";
-import { Button } from "@/ui/shadcn/button";
 
 interface AddToCartProps {
 	variantId: string;
@@ -27,14 +25,12 @@ export function AddToCart({ variantId, quantity = 1, className = "", children, o
 	};
 
 	return (
-		<Button
+		<button
 			onClick={handleAddToCart}
-			type="button"
-			size="lg"
-			className={cn("gap-2 h-auto px-6 py-3 text-base font-semibold", className)}
+			className={`cursor-pointer flex items-center justify-center gap-2 rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 transition-colors ${className}`}
 		>
 			<Plus className="h-4 w-4" />
 			{children || "Add to Cart"}
-		</Button>
+		</button>
 	);
 }
