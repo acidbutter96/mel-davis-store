@@ -171,6 +171,22 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+
+	button,
+	a,
+	[role="button"],
+	summary,
+	label:has(input[type="checkbox" i]),
+	label:has(input[type="radio" i]) {
+		cursor: pointer;
+	}
+
+	button:disabled,
+	[role="button"][aria-disabled="true"],
+	a[aria-disabled="true"],
+	a[disabled] {
+		cursor: not-allowed;
+	}
 }
 
 label:has([required]) > span:first-child {

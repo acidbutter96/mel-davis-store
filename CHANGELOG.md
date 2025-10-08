@@ -1,3 +1,18 @@
+## [Unreleased]
+
+### Added
+- `/user` page showing logged in user data and mock order list.
+- Auto-login after registration: `/api/auth/register` now creates a 5h `session` cookie and the flow redirects user to `/user`.
+
+### Changed
+- Login server action now authenticates against MongoDB and creates a `session` cookie (5h expiry).
+- Middleware updated to protect `/user` and refresh the session near expiration.
+- User icon in the header now routes to `/user` when authenticated, otherwise `/login`.
+- Profile page now pre-fills phone and address fields with data stored in MongoDB.
+
+### Fixed
+- Previous login issue that relied on static EMAIL/PASSWORD env variables.
+
 # [1.12.0](https://github.com/yournextstore/yournextstore/compare/v1.11.1...v1.12.0) (2024-06-26)
 
 ### Bug Fixes

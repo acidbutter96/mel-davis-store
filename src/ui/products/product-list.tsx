@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { getLocale } from "@/i18n/server";
 import type { Product } from "@/lib/commerce-types";
-import { formatMoney } from "@/lib/utils";
+import { deslugify, formatMoney } from "@/lib/utils";
 import { JsonLd, mappedProductsToJsonLd } from "@/ui/json-ld";
 import { YnsLink } from "@/ui/yns-link";
 
@@ -33,7 +33,7 @@ export const ProductList = async ({ products }: { products: Product[] }) => {
 									<div className="p-2">
 										<h2 className="text-xl font-medium text-neutral-700">{product.name}</h2>
 										<footer className="text-base font-normal text-neutral-900">
-											{product.price && (
+											{typeof product.price === "number" && (
 												<p>
 													{formatMoney({
 														amount: product.price,
@@ -41,6 +41,21 @@ export const ProductList = async ({ products }: { products: Product[] }) => {
 														locale,
 													})}
 												</p>
+											)}
+											{product.variants && product.variants.length > 1 && (
+												<ul className="mt-2 flex flex-wrap gap-2 text-sm text-neutral-500">
+													{product.variants.map((variant, index) => {
+														const label = variant.label ? deslugify(variant.label) : `Option ${index + 1}`;
+														return (
+															<li
+																key={variant.id}
+																className="rounded-full border border-neutral-200 px-2 py-0.5"
+															>
+																{label}
+															</li>
+														);
+													})}
+												</ul>
 											)}
 										</footer>
 									</div>

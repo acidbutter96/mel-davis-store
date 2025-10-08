@@ -5,6 +5,12 @@ export interface ProductVariant {
 	id: string;
 	price: number; // minor units (Stripe unit_amount)
 	currency: string;
+	label?: string | null;
+	slug?: string | null;
+	productId?: string;
+	description?: string | null;
+	images?: string[];
+	stock?: number | null;
 }
 
 export interface CategoryRef {

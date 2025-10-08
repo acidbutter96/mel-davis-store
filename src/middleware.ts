@@ -1,30 +1,49 @@
+import { jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { decrypt, updateSession } from "./lib/auth";
+import { env } from "@/env.mjs";
+import { coreDecrypt } from "@/lib/session-core";
 
-const ProtectedPaths = ["/orders"];
+async function verifyAuth(request: NextRequest) {
+	const auth = request.headers.get("authorization") || request.headers.get("Authorization");
+	if (auth?.startsWith("Bearer ")) {
+		const token = auth.slice(7).trim();
+		try {
+			const secret = new TextEncoder().encode(env.JWT_SECRET);
+			await jwtVerify(token, secret, { algorithms: ["HS256"] });
+			return true;
+		} catch {
+			/* ignore */
+		}
+	}
+	const session = request.cookies.get("session")?.value;
+	if (session) {
+		const data = await coreDecrypt(session);
+		if (data && data.expires > Date.now()) return true;
+	}
+	return false;
+}
 
 export async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
-	const isProtectedPath = ProtectedPaths.some((p) => pathname.startsWith(p));
+	const isApi = pathname.startsWith("/api");
+	const isAuthPublic = pathname === "/api/auth/login" || pathname === "/api/auth/register";
+	const pageProtected = pathname.startsWith("/orders") || pathname.startsWith("/user");
 
-	if (!isProtectedPath) {
+	if (isApi && !isAuthPublic) {
+		const ok = await verifyAuth(request);
+		if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 		return NextResponse.next();
 	}
 
-	const session = request.cookies.get("session")?.value;
-	if (!session) {
-		return NextResponse.redirect(new URL("/login", request.url));
+	if (pageProtected) {
+		const ok = await verifyAuth(request);
+		if (!ok) return NextResponse.redirect(new URL("/login", request.url));
+		return NextResponse.next();
 	}
-
-	const data = await decrypt(session);
-	if (!data || data.expires < Date.now()) {
-		return NextResponse.redirect(new URL("/login", request.url));
-	}
-
-	return updateSession(request);
+	return NextResponse.next();
 }
 
 export const config = {
-	matcher: ["/orders"],
+	matcher: ["/api/:path*", "/orders/:path*", "/user/:path*"],
 };
