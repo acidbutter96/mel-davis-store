@@ -29,6 +29,13 @@ const sections = [
 			},
 		],
 	},
+	{
+		header: "Legal",
+		links: [
+			{ label: "Terms", href: "/terms" },
+			{ label: "Privacy", href: "/privacy" },
+		],
+	},
 ];
 
 export async function Footer() {
