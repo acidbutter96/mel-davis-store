@@ -46,7 +46,7 @@ export const accountToWebsiteJsonLd = ({
 	return {
 		"@context": "https://schema.org",
 		"@type": "WebSite",
-		name: account?.business_profile?.name ?? "Your Next Store",
+		name: account?.business_profile?.name ?? "Mel Davis",
 		url: account?.business_profile?.url ?? "https://yournextstore.com",
 		mainEntityOfPage: {
 			"@type": "WebPage",
@@ -60,7 +60,7 @@ export const accountToWebsiteJsonLd = ({
 		}),
 		publisher: {
 			"@type": "Organization",
-			name: account?.business_profile?.name ?? "Your Next Store",
+			name: account?.business_profile?.name ?? "Mel Davis",
 			url: account?.business_profile?.url ?? "https://yournextstore.com",
 		},
 	};

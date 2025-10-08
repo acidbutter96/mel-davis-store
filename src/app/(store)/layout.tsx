@@ -15,7 +15,6 @@ export default async function StoreLayout({
 
 	return (
 		<CartProvider>
-			{/* Attempt a one-time merge of any guest cart after auth */}
 			<CartMergeOnAuth />
 			<Nav />
 			<TooltipProvider>
