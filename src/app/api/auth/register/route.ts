@@ -7,6 +7,7 @@ import { commerce } from "@/lib/commerce-stripe";
 import { ensureIndexes, getDb } from "@/lib/mongodb";
 import { createPersistentSession } from "@/lib/session";
 
+
 const registerSchema = z.object({
 	email: z.string().email(),
 	password: z.string().min(6),
