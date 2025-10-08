@@ -1,32 +1,8 @@
 import Image from "next/image";
 import { getTranslations } from "@/i18n/server";
-import StoreConfig from "@/store.config";
+import { getStripeCategories } from "@/lib/stripe-categories";
 import { Newsletter } from "@/ui/footer/newsletter.client";
 import { YnsLink } from "@/ui/yns-link";
-
-const sections = [
-	{
-		header: "Products",
-		links: StoreConfig.categories.map(({ name, slug }) => ({
-			label: name,
-			href: `/category/${slug}`,
-		})),
-	},
-	{
-		header: "Support",
-		links: [
-			{ label: "FAQ", href: "/faq" },
-			{ label: "Contact Us", href: "/contact" },
-		],
-	},
-	{
-		header: "Legal",
-		links: [
-			{ label: "Terms", href: "/terms" },
-			{ label: "Privacy", href: "/privacy" },
-		],
-	},
-];
 
 const paymentIcons = [
 	{ label: "Stripe", src: "/images/icons/stripe.svg" },
@@ -40,8 +16,30 @@ const paymentIcons = [
 
 export async function Footer() {
 	const t = await getTranslations("Global.footer");
-
 	const year = new Date().getFullYear();
+
+	const dynamicCategories = await getStripeCategories();
+
+	const sections = [
+		{
+			header: "Products",
+			links: dynamicCategories.map(({ name, slug }) => ({ label: name, href: `/category/${slug}` })),
+		},
+		{
+			header: "Support",
+			links: [
+				{ label: "FAQ", href: "/faq" },
+				{ label: "Contact Us", href: "/contact" },
+			],
+		},
+		{
+			header: "Legal",
+			links: [
+				{ label: "Terms", href: "/terms" },
+				{ label: "Privacy", href: "/privacy" },
+			],
+		},
+	];
 
 	return (
 		<footer className="w-full bg-neutral-50 p-6 text-neutral-800 md:py-12">
