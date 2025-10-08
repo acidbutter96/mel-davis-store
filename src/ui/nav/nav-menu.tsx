@@ -1,23 +1,13 @@
 import Link from "next/link";
-import StoreConfig from "@/store.config";
+import { getStripeCategories } from "@/lib/stripe-categories";
 import { NavMobileMenu } from "@/ui/nav/nav-mobile-menu.client";
 
-const links = [
-	{
-		label: "Home",
-		href: "/",
-	},
-	...StoreConfig.categories.map(({ name, slug }) => ({
-		label: name,
-		href: `/category/${slug}`,
-	})),
-	{
-		label: "Digital",
-		href: "/category/digital",
-	},
-];
-
-export const NavMenu = () => {
+export const NavMenu = async () => {
+	const dynamicCategories = await getStripeCategories();
+	const links = [
+		{ label: "Home", href: "/" },
+		...dynamicCategories.map(({ name, slug }) => ({ label: name, href: `/category/${slug}` })),
+	];
 	return (
 		<>
 			<div className="sm:block hidden">
