@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FaqAccordion } from "@/ui/faq/faq-accordion.client";
 import { Footer } from "@/ui/footer/footer";
 import { Nav } from "@/ui/nav/nav";
 
@@ -32,14 +33,7 @@ export default function FaqPage() {
 			<Nav />
 			<main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 				<h1 className="text-2xl font-semibold tracking-tight mb-6">Frequently Asked Questions</h1>
-				<div className="space-y-6">
-					{faqs.map(({ q, a }) => (
-						<div key={q} className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-							<h2 className="text-base font-medium mb-1">{q}</h2>
-							<p className="text-sm leading-relaxed text-neutral-600">{a}</p>
-						</div>
-					))}
-				</div>
+				<FaqAccordion items={faqs} />
 			</main>
 			<Footer />
 		</div>
