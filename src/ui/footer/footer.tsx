@@ -1,4 +1,4 @@
-import type { SVGAttributes } from "react";
+import Image from "next/image";
 import { getTranslations } from "@/i18n/server";
 import StoreConfig from "@/store.config";
 import { Newsletter } from "@/ui/footer/newsletter.client";
@@ -15,18 +15,8 @@ const sections = [
 	{
 		header: "Support",
 		links: [
-			{
-				label: "Features",
-				href: "https://yournextstore.com/#features",
-			},
-			{
-				label: "Pricing",
-				href: "https://yournextstore.com/#pricing",
-			},
-			{
-				label: "Contact Us",
-				href: "mailto:hi@yournextstore.com",
-			},
+			{ label: "FAQ", href: "/faq" },
+			{ label: "Contact Us", href: "/contact" },
 		],
 	},
 	{
@@ -38,8 +28,20 @@ const sections = [
 	},
 ];
 
+const paymentIcons = [
+	{ label: "Stripe", src: "/images/icons/stripe.svg" },
+	{ label: "Visa", src: "/images/icons/visa.svg" },
+	{ label: "Mastercard", src: "/images/icons/mastercard.svg" },
+	{ label: "American Express", src: "/images/icons/amex.svg" },
+	{ label: "Apple Pay", src: "/images/icons/apple-pay.svg" },
+	{ label: "Google Pay", src: "/images/icons/google-pay.svg" },
+	{ label: "Amazon Pay", src: "/images/icons/amazon-pay.svg" },
+];
+
 export async function Footer() {
 	const t = await getTranslations("Global.footer");
+
+	const year = new Date().getFullYear();
 
 	return (
 		<footer className="w-full bg-neutral-50 p-6 text-neutral-800 md:py-12">
@@ -68,39 +70,54 @@ export async function Footer() {
 					))}
 				</nav>
 			</div>
+
 			<div className="container mt-8 flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-neutral-500 md:flex-row">
-				<div>
-					<p>© 2024 Mel Davis</p>
-					<p>Delightful commerce for everyone</p>
+				<div className="flex items-center relative w-full md:w-2/3">
+					<div className="w-full md:max-w-lg">
+						<p className="flex flex-wrap items-center gap-2 font-medium font-['Roboto',sans-serif] mb-1">
+							<span>Copyright &copy; {year}. DevButter All Rights Reserved. | Developed By</span>
+							<a
+								href="https://devbutter.tech/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="inline-flex items-center gap-1 transition-colors hover:text-neutral-700"
+								aria-label="Open DevButter site in a new tab"
+							>
+								<Image
+									src="/images/icons/devbutter.svg"
+									width={24}
+									height={24}
+									alt="DevButter"
+									className="h-6 w-6 object-contain"
+								/>
+								<span className="sr-only">DevButter</span>
+							</a>
+						</p>
+					</div>
 				</div>
-				<div className="flex items-center gap-4">
-					<YnsLink
-						className="inline-flex items-center gap-1 transition-colors hover:text-neutral-700"
-						href="https://x.com/zaiste"
+
+				<div className="flex items-center gap-4 w-full md:w-auto md:justify-end">
+					<ul
+						className="flex items-center gap-4 flex-wrap md:flex-nowrap whitespace-nowrap"
+						aria-label="Accepted payment methods"
 					>
-						<TwitterIcon className="h-4 w-4" /> @zaiste
-						<span className="sr-only">Twitter</span>
-					</YnsLink>
-					<YnsLink
-						className="inline-flex items-center gap-1 transition-colors hover:text-neutral-700"
-						href="https://x.com/typeofweb"
-					>
-						<TwitterIcon className="h-4 w-4" /> @typeofweb
-						<span className="sr-only">Twitter</span>
-					</YnsLink>
+						{paymentIcons.map((icon) => (
+							<li key={icon.label} className="flex">
+								<span className="inline-flex" title={icon.label} aria-label={icon.label}>
+									<Image
+										src={icon.src}
+										alt={icon.label}
+										width={52}
+										height={32}
+										className="h-8 w-auto object-contain opacity-80 transition-opacity hover:opacity-100"
+									/>
+									<span className="sr-only">{icon.label}</span>
+								</span>
+							</li>
+						))}
+					</ul>
 				</div>
 			</div>
 		</footer>
-	);
-}
-
-function TwitterIcon(props: SVGAttributes<SVGSVGElement>) {
-	return (
-		<svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 596 596" fill="none">
-			<path
-				fill="#fff"
-				d="m1 19 230 307L0 577h52l203-219 164 219h177L353 252 568 19h-52L329 221 179 19H1Zm77 38h82l359 481h-81L78 57Z"
-			/>
-		</svg>
 	);
 }
