@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/shadcn/card";
+import { StatusBadge } from "@/ui/status-badge";
 
 export default async function AdminOrderDetails({ params }: { params: { id: string } }) {
 	const session = await auth();
@@ -49,9 +50,9 @@ export default async function AdminOrderDetails({ params }: { params: { id: stri
 					<div>
 						<span className="text-muted-foreground">User:</span> {doc.email}
 					</div>
-					<div>
-						<span className="text-muted-foreground">Status:</span>{" "}
-						<span className="capitalize">{p.status}</span>
+					<div className="flex items-center gap-2">
+						<span className="text-muted-foreground">Status:</span>
+						<StatusBadge status={p.status} />
 					</div>
 					<div>
 						<span className="text-muted-foreground">Amount:</span>{" "}

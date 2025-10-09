@@ -15,6 +15,7 @@ import { AdminFilters } from "./admin-filters.client";
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { StatusBadge } from "@/ui/status-badge";
 
 type RecentPurchase = {
 	id: string;
@@ -109,6 +110,47 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 	else filtered.sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
 	const recent = filtered.slice(0, 10);
 
+	// Metrics: revenue (paid only), paid vs failed, and top customers
+	const isPaid = (s: string) => {
+		const v = s.toLowerCase();
+		return v === "paid" || v === "succeeded";
+	};
+	const isFailed = (s: string) => s.toLowerCase() === "failed";
+
+	const paidOnly = filtered.filter((p) => isPaid(p.status));
+	const revenueCents = paidOnly.reduce(
+		(sum, p) => sum + (typeof p.amountTotal === "number" ? p.amountTotal : 0),
+		0,
+	);
+	const paidCount = paidOnly.length;
+	const failedCount = filtered.filter((p) => isFailed(p.status)).length;
+
+	// Rank users by number of purchases and total spent (paid only)
+	const topMap = new Map<
+		string,
+		{ email: string; count: number; paidCount: number; totalSpentCents: number }
+	>();
+	for (const p of filtered) {
+		const email = p.userEmail || "(unknown)";
+		let entry = topMap.get(email);
+		if (!entry) {
+			entry = { email, count: 0, paidCount: 0, totalSpentCents: 0 };
+			topMap.set(email, entry);
+		}
+		entry.count += 1;
+		if (isPaid(p.status)) {
+			entry.paidCount += 1;
+			entry.totalSpentCents += typeof p.amountTotal === "number" ? p.amountTotal : 0;
+		}
+	}
+	const topCustomers = Array.from(topMap.values())
+		.sort((a, b) => {
+			if (b.totalSpentCents !== a.totalSpentCents) return b.totalSpentCents - a.totalSpentCents;
+			if (b.paidCount !== a.paidCount) return b.paidCount - a.paidCount;
+			return b.count - a.count;
+		})
+		.slice(0, 5);
+
 	const formatMoney = (amount: number, currency: string) => {
 		try {
 			return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount / 100);
@@ -116,6 +158,32 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 			return `${(amount / 100).toFixed(2)} ${currency}`;
 		}
 	};
+
+	// Build simple revenue sparkline data (paid only)
+	const effectiveSince = since ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+	const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+	const paidByDay = new Map<string, number>();
+	for (const p of paidOnly) {
+		const k = dayKey(new Date(p.createdAt));
+		paidByDay.set(k, (paidByDay.get(k) || 0) + p.amountTotal);
+	}
+	const days: string[] = [];
+	for (let d = new Date(effectiveSince); d <= now; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+		days.push(dayKey(d));
+	}
+	const series = days.map((k) => paidByDay.get(k) || 0);
+	const maxVal = series.reduce((m, v) => (v > m ? v : m), 0) || 1;
+	const width = 200;
+	const height = 60;
+	const points = series
+		.map((v, i) => {
+			const x = (i / (series.length - 1 || 1)) * width;
+			const y = height - (v / maxVal) * height;
+			return `${x},${y}`;
+		})
+		.join(" ");
+
+	// StatusBadge is shared in ui/status-badge
 
 	return (
 		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
@@ -125,7 +193,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 				<AdminFilters defaultStatus={status} defaultPeriod={period} defaultSort={sort} />
 			</div>
 
-			<section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+			<section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				<Card>
 					<CardHeader>
 						<CardTitle className="text-sm text-muted-foreground">Users</CardTitle>
@@ -141,10 +209,57 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 				</Card>
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-sm text-muted-foreground">Total purchases (last 10 shown)</CardTitle>
+						<CardTitle className="text-sm text-muted-foreground">Revenue (paid)</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-3xl font-bold">{purchases.length}</div>
+						<div className="text-3xl font-bold">
+							{formatMoney(revenueCents, recent[0]?.currency || "USD")}
+						</div>
+						<div className="mt-3">
+							<svg
+								viewBox={`0 0 ${width} ${height}`}
+								width="100%"
+								height="60"
+								preserveAspectRatio="none"
+								className="text-primary"
+							>
+								<polyline fill="none" stroke="currentColor" strokeWidth="2" points={points} />
+							</svg>
+						</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-sm text-muted-foreground">Paid vs Failed</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-lg font-medium mb-2">
+							<span className="text-emerald-600">{paidCount} paid</span>
+							<span className="mx-2 text-muted-foreground">/</span>
+							<span className="text-red-600">{failedCount} failed</span>
+						</div>
+						<div className="h-2 w-full rounded bg-muted overflow-hidden flex">
+							<div
+								className="h-full bg-emerald-500"
+								style={{
+									width: `${paidCount + failedCount === 0 ? 0 : (paidCount / (paidCount + failedCount)) * 100}%`,
+								}}
+							/>
+							<div
+								className="h-full bg-red-500"
+								style={{
+									width: `${paidCount + failedCount === 0 ? 0 : (failedCount / (paidCount + failedCount)) * 100}%`,
+								}}
+							/>
+						</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-sm text-muted-foreground">Filtered purchases</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-3xl font-bold">{filtered.length}</div>
 						<div className="mt-2 text-sm">
 							<Link className="underline" href="/admin/orders">
 								View orders
@@ -183,7 +298,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 									<TableRow key={p.id}>
 										<TableCell>{p.userEmail}</TableCell>
 										<TableCell>{formatMoney(p.amountTotal, p.currency)}</TableCell>
-										<TableCell className="capitalize">{p.status}</TableCell>
+										<TableCell className="capitalize">
+											<StatusBadge status={p.status} />
+										</TableCell>
 										<TableCell>{new Date(p.createdAt).toLocaleString()}</TableCell>
 										<TableCell className="font-mono text-xs">{p.id}</TableCell>
 									</TableRow>
@@ -197,6 +314,45 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 								)}
 							</TableBody>
 							<TableCaption>Showing up to the last 10 purchases.</TableCaption>
+						</Table>
+					</CardContent>
+				</Card>
+			</section>
+
+			<section>
+				<Card>
+					<CardHeader>
+						<CardTitle>Top customers</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>User</TableHead>
+									<TableHead className="text-right">Orders</TableHead>
+									<TableHead className="text-right">Paid</TableHead>
+									<TableHead className="text-right">Total spent</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{topCustomers.map((c) => (
+									<TableRow key={c.email}>
+										<TableCell>{c.email}</TableCell>
+										<TableCell className="text-right">{c.count}</TableCell>
+										<TableCell className="text-right">{c.paidCount}</TableCell>
+										<TableCell className="text-right">
+											{formatMoney(c.totalSpentCents, recent[0]?.currency || "USD")}
+										</TableCell>
+									</TableRow>
+								))}
+								{topCustomers.length === 0 && (
+									<TableRow>
+										<TableCell colSpan={4} className="text-muted-foreground py-6">
+											No customers.
+										</TableCell>
+									</TableRow>
+								)}
+							</TableBody>
 						</Table>
 					</CardContent>
 				</Card>

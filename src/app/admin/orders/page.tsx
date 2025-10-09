@@ -15,6 +15,8 @@ import {
 import { AdminFilters } from "../admin-filters.client";
 export const dynamic = "force-dynamic";
 
+import { StatusBadge } from "@/ui/status-badge";
+
 type SearchParams = { status?: string | string[]; period?: string | string[]; sort?: string | string[] };
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams?: SearchParams }) {
@@ -103,7 +105,9 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
 											currency: it.purchases.currency?.toUpperCase?.() || "USD",
 										}).format((it.purchases.amountTotal || 0) / 100)}
 									</TableCell>
-									<TableCell className="capitalize">{it.purchases.status}</TableCell>
+									<TableCell className="capitalize">
+										<StatusBadge status={it.purchases.status} />
+									</TableCell>
 									<TableCell>{new Date(it.purchases.createdAt).toLocaleString()}</TableCell>
 									<TableCell className="font-mono text-xs">{it.purchases.id}</TableCell>
 									<TableCell className="text-right">
