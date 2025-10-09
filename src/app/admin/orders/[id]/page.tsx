@@ -4,12 +4,13 @@ import { getDb } from "@/lib/mongodb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/shadcn/card";
 import { StatusBadge } from "@/ui/status-badge";
 
-export default async function AdminOrderDetails({ params }: { params: { id: string } }) {
+export default async function AdminOrderDetails({ params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	const session = await auth();
 	if (!session) redirect("/login");
 	if (session.user.role !== "admin") redirect("/forbidden");
 
-	const purchaseId = params?.id;
+	const purchaseId = id;
 	if (!purchaseId) redirect("/admin/orders");
 
 	const db = await getDb();

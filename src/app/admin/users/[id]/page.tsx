@@ -8,12 +8,12 @@ function isValidObjectId(id: string | undefined | null): id is string {
 	return !!id && /^[0-9a-fA-F]{24}$/.test(id);
 }
 
-export default async function AdminUserDetails({ params }: { params: { id: string } }) {
+export default async function AdminUserDetails({ params }: { params: Promise<{ id: string }> }) {
 	const session = await auth();
 	if (!session) redirect("/login");
 	if (session.user.role !== "admin") redirect("/forbidden");
 
-	const id = params?.id;
+	const { id } = await params;
 	if (!isValidObjectId(id)) redirect("/admin/users");
 
 	const db = await getDb();

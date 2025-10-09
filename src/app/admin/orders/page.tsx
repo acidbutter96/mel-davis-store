@@ -19,12 +19,13 @@ import { StatusBadge } from "@/ui/status-badge";
 
 type SearchParams = { status?: string | string[]; period?: string | string[]; sort?: string | string[] };
 
-export default async function AdminOrdersPage({ searchParams }: { searchParams?: SearchParams }) {
+export default async function AdminOrdersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
 	const session = await auth();
 	if (!session) redirect("/login");
 	if (session.user.role !== "admin") redirect("/forbidden");
 
 	const db = await getDb();
+	const sp = (await searchParams) || {};
 	const asStr = (v: unknown): string | undefined =>
 		typeof v === "string"
 			? v
@@ -33,9 +34,9 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
 					? (v[0] as string)
 					: undefined
 				: undefined;
-	const status = (asStr(searchParams?.status) ?? "all").toLowerCase();
-	const period = (asStr(searchParams?.period) ?? "30d").toLowerCase();
-	const sort = (asStr(searchParams?.sort) ?? "date-desc").toLowerCase();
+	const status = (asStr(sp?.status) ?? "all").toLowerCase();
+	const period = (asStr(sp?.period) ?? "30d").toLowerCase();
+	const sort = (asStr(sp?.sort) ?? "date-desc").toLowerCase();
 
 	const now = new Date();
 	let since: Date | null = null;

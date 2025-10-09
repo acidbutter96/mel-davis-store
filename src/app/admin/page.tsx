@@ -44,7 +44,7 @@ interface UserWithPurchasesLite {
 
 type SearchParams = { status?: string | string[]; period?: string | string[]; sort?: string | string[] };
 
-export default async function AdminPage({ searchParams }: { searchParams?: SearchParams }) {
+export default async function AdminPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
 	const session = await auth();
 	if (!session) redirect("/login");
 	const role = session.user.role === "admin" ? "admin" : "customer";
@@ -62,9 +62,10 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 					? (v[0] as string)
 					: undefined
 				: undefined;
-	const status = (asStr(searchParams?.status) ?? "all").toLowerCase();
-	const period = (asStr(searchParams?.period) ?? "30d").toLowerCase();
-	const sort = (asStr(searchParams?.sort) ?? "date-desc").toLowerCase();
+	const sp = (await searchParams) || {};
+	const status = (asStr(sp?.status) ?? "all").toLowerCase();
+	const period = (asStr(sp?.period) ?? "30d").toLowerCase();
+	const sort = (asStr(sp?.sort) ?? "date-desc").toLowerCase();
 
 	const now = new Date();
 	let since: Date | null = null;
