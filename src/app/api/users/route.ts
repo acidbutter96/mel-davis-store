@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
 			name: data.name,
 			passwordHash,
 			cart: guestCartItems ? { items: guestCartItems } : undefined,
+			role: "customer" as const,
 			createdAt: now,
 			updatedAt: now,
 		};

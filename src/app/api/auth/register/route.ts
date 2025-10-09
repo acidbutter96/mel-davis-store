@@ -124,6 +124,7 @@ export async function POST(req: Request) {
 			address: data.address,
 			passwordHash,
 			cart: mergedCartItems ? { items: mergedCartItems } : undefined,
+			role: "customer" as const,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
 		console.debug("[register] user inserted with cart?", Boolean(userDoc.cart));
 
 		const userId = res.insertedId.toString();
-		await createPersistentSession({ id: userId, email: emailLower, name: data.name });
+		await createPersistentSession({ id: userId, email: emailLower, name: data.name, role: "customer" });
 		const legacyToken = await new SignJWT({ sub: userId, email: emailLower })
 			.setProtectedHeader({ alg: "HS256" })
 			.setIssuedAt()
@@ -141,7 +142,7 @@ export async function POST(req: Request) {
 		return new Response(
 			JSON.stringify({
 				token: legacyToken,
-				user: { _id: userId, email: emailLower, name: data.name },
+				user: { _id: userId, email: emailLower, name: data.name, role: "customer" },
 				autoLoggedIn: true,
 			}),
 			{ status: 201 },

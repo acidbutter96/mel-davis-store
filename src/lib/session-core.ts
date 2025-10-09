@@ -6,7 +6,7 @@ if (!env.JWT_SECRET) throw new Error("JWT_SECRET must be defined");
 const key = new TextEncoder().encode(env.JWT_SECRET);
 
 export interface CoreSessionData extends JWTPayload {
-	user: { id: string; email: string; name?: string };
+	user: { id: string; email: string; name?: string; role?: "admin" | "customer" };
 	expires: number;
 }
 
