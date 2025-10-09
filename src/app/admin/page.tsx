@@ -12,6 +12,9 @@ import {
 	TableRow,
 } from "@/ui/shadcn/table";
 import { AdminFilters } from "./admin-filters.client";
+export const dynamic = "force-dynamic";
+
+import Link from "next/link";
 
 type RecentPurchase = {
 	id: string;
@@ -35,7 +38,7 @@ interface UserWithPurchasesLite {
 	purchases?: PurchaseDocLite[];
 }
 
-type SearchParams = { status?: string; period?: string; sort?: string };
+type SearchParams = { status?: string | string[]; period?: string | string[]; sort?: string | string[] };
 
 export default async function AdminPage({ searchParams }: { searchParams?: SearchParams }) {
 	const session = await auth();
@@ -46,10 +49,18 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 	const db = await getDb();
 	const usersCount = await db.collection("users").countDocuments();
 
-	// Build filters
-	const status = (searchParams?.status || "all").toLowerCase();
-	const period = (searchParams?.period || "30d").toLowerCase();
-	const sort = (searchParams?.sort || "date-desc").toLowerCase();
+	// Build filters (accept string | string[] from searchParams)
+	const asStr = (v: unknown): string | undefined =>
+		typeof v === "string"
+			? v
+			: Array.isArray(v)
+				? typeof v[0] === "string"
+					? (v[0] as string)
+					: undefined
+				: undefined;
+	const status = (asStr(searchParams?.status) ?? "all").toLowerCase();
+	const period = (asStr(searchParams?.period) ?? "30d").toLowerCase();
+	const sort = (asStr(searchParams?.sort) ?? "date-desc").toLowerCase();
 
 	const now = new Date();
 	let since: Date | null = null;
@@ -121,6 +132,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 					</CardHeader>
 					<CardContent>
 						<div className="text-3xl font-bold">{usersCount}</div>
+						<div className="mt-2 text-sm">
+							<Link className="underline" href="/admin/users">
+								View users
+							</Link>
+						</div>
 					</CardContent>
 				</Card>
 				<Card>
@@ -129,6 +145,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 					</CardHeader>
 					<CardContent>
 						<div className="text-3xl font-bold">{purchases.length}</div>
+						<div className="mt-2 text-sm">
+							<Link className="underline" href="/admin/orders">
+								View orders
+							</Link>
+						</div>
 					</CardContent>
 				</Card>
 				<Card>

@@ -23,3 +23,16 @@ export async function requireAuth() {
 	}
 	return { error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }) };
 }
+
+export async function requireAdmin() {
+	// Prefer cookie session so we can read role
+	const sessionToken = (await cookies()).get("session")?.value;
+	if (sessionToken) {
+		const data = await coreDecrypt(sessionToken);
+		if (data && data.expires > Date.now() && data.user?.role === "admin") {
+			return { session: { sub: data.user.id, email: data.user.email, role: "admin" as const } };
+		}
+	}
+	// Fallback: Authorization header won't carry role; reject to avoid privilege escalation
+	return { error: new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 }) };
+}
