@@ -15,6 +15,9 @@ import { AdminFilters } from "./admin-filters.client";
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { PaidVsFailedDonut } from "@/ui/charts/paid-vs-failed-donut.client";
+import { RevenueSparkline } from "@/ui/charts/revenue-sparkline.client";
+import { RevenueZoomBrush } from "@/ui/charts/revenue-zoom-brush.client";
 import { StatusBadge } from "@/ui/status-badge";
 
 type RecentPurchase = {
@@ -172,16 +175,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 		days.push(dayKey(d));
 	}
 	const series = days.map((k) => paidByDay.get(k) || 0);
-	const maxVal = series.reduce((m, v) => (v > m ? v : m), 0) || 1;
-	const width = 200;
-	const height = 60;
-	const points = series
-		.map((v, i) => {
-			const x = (i / (series.length - 1 || 1)) * width;
-			const y = height - (v / maxVal) * height;
-			return `${x},${y}`;
-		})
-		.join(" ");
+
+	// Build points for zoom/brush chart (x as timestamp, y in cents)
+	const zoomBrushPoints = days.map((k) => ({ x: new Date(k).getTime(), y: paidByDay.get(k) || 0 }));
 
 	// StatusBadge is shared in ui/status-badge
 
@@ -216,15 +212,12 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 							{formatMoney(revenueCents, recent[0]?.currency || "USD")}
 						</div>
 						<div className="mt-3">
-							<svg
-								viewBox={`0 0 ${width} ${height}`}
-								width="100%"
-								height="60"
-								preserveAspectRatio="none"
-								className="text-primary"
-							>
-								<polyline fill="none" stroke="currentColor" strokeWidth="2" points={points} />
-							</svg>
+							<RevenueSparkline
+								seriesCents={series}
+								labels={days}
+								currency={recent[0]?.currency || "USD"}
+								height={80}
+							/>
 						</div>
 					</CardContent>
 				</Card>
@@ -238,20 +231,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 							<span className="mx-2 text-muted-foreground">/</span>
 							<span className="text-red-600">{failedCount} failed</span>
 						</div>
-						<div className="h-2 w-full rounded bg-muted overflow-hidden flex">
-							<div
-								className="h-full bg-emerald-500"
-								style={{
-									width: `${paidCount + failedCount === 0 ? 0 : (paidCount / (paidCount + failedCount)) * 100}%`,
-								}}
-							/>
-							<div
-								className="h-full bg-red-500"
-								style={{
-									width: `${paidCount + failedCount === 0 ? 0 : (failedCount / (paidCount + failedCount)) * 100}%`,
-								}}
-							/>
-						</div>
+						<PaidVsFailedDonut paid={paidCount} failed={failedCount} height={200} />
 					</CardContent>
 				</Card>
 				<Card>
@@ -315,6 +295,17 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 							</TableBody>
 							<TableCaption>Showing up to the last 10 purchases.</TableCaption>
 						</Table>
+					</CardContent>
+				</Card>
+			</section>
+
+			<section>
+				<Card>
+					<CardHeader>
+						<CardTitle>Revenue over time (Zoom/Brush)</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<RevenueZoomBrush points={zoomBrushPoints} currency={recent[0]?.currency || "USD"} />
 					</CardContent>
 				</Card>
 			</section>
