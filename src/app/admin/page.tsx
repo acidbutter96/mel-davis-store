@@ -182,7 +182,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 	// StatusBadge is shared in ui/status-badge
 
 	return (
-		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 bg-background text-foreground">
 			<div className="space-y-3">
 				<h1 className="text-2xl font-semibold">Admin Dashboard</h1>
 				<p className="text-muted-foreground">High-level overview of your store.</p>
@@ -197,7 +197,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 					<CardContent>
 						<div className="text-3xl font-bold">{usersCount}</div>
 						<div className="mt-2 text-sm">
-							<Link className="underline" href="/admin/users">
+							<Link className="underline text-primary hover:text-primary/80" href="/admin/users">
 								View users
 							</Link>
 						</div>
@@ -227,9 +227,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 					</CardHeader>
 					<CardContent>
 						<div className="text-lg font-medium mb-2">
-							<span className="text-emerald-600">{paidCount} paid</span>
+							<span className="text-emerald-600 dark:text-emerald-400">{paidCount} paid</span>
 							<span className="mx-2 text-muted-foreground">/</span>
-							<span className="text-red-600">{failedCount} failed</span>
+							<span className="text-red-600 dark:text-red-400">{failedCount} failed</span>
 						</div>
 						<PaidVsFailedDonut paid={paidCount} failed={failedCount} height={200} />
 					</CardContent>
@@ -241,7 +241,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 					<CardContent>
 						<div className="text-3xl font-bold">{filtered.length}</div>
 						<div className="mt-2 text-sm">
-							<Link className="underline" href="/admin/orders">
+							<Link className="underline text-primary hover:text-primary/80" href="/admin/orders">
 								View orders
 							</Link>
 						</div>

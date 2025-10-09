@@ -1,7 +1,9 @@
 "use client";
 
+import type { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
+import { useAdminTheme } from "@/app/admin/_components/admin-theme-provider.client";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -12,24 +14,19 @@ type PaidVsFailedDonutProps = {
 };
 
 export function PaidVsFailedDonut({ paid, failed, height = 200 }: PaidVsFailedDonutProps) {
+	const { theme } = useAdminTheme();
 	const series = useMemo(() => [paid, failed], [paid, failed]);
-	const options = useMemo(
+	const options: ApexOptions = useMemo(
 		() => ({
+			theme: { mode: theme },
 			chart: { type: "donut", animations: { enabled: true } },
 			labels: ["Paid", "Failed"],
-			colors: ["#22c55e", "#ef4444"],
+			colors: [theme === "dark" ? "#34d399" : "#22c55e", "#ef4444"],
 			legend: { show: true, position: "bottom" },
 			dataLabels: { enabled: false },
 			stroke: { width: 0 },
 		}),
-		[],
+		[theme],
 	);
-	return (
-		<ReactApexChart
-			options={options as unknown as Record<string, unknown>}
-			series={series as unknown as number[]}
-			type="donut"
-			height={height}
-		/>
-	);
+	return <ReactApexChart options={options} series={series} type="donut" height={height} />;
 }

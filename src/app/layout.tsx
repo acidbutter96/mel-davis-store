@@ -26,14 +26,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
 	return (
 		<html lang={locale} className="h-full antialiased">
-			<body className="flex min-h-full flex-col">
+			<body className="flex min-h-full flex-col bg-background text-foreground">
 				<IntlClientProvider messages={messages} locale={locale}>
 					<Suspense fallback={null}>
 						<CartProvider>
 							<Suspense fallback={null}>
 								<CheckoutSuccessHandler />
 							</Suspense>
-							<div className="flex min-h-full flex-1 flex-col bg-white" vaul-drawer-wrapper="">
+							<div className="flex min-h-full flex-1 flex-col" vaul-drawer-wrapper="">
 								{children}
 							</div>
 							<Toaster position="top-center" offset={10} />

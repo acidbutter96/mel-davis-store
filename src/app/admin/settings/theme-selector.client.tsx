@@ -8,7 +8,13 @@ export function AdminThemeSelector() {
 	return (
 		<div className="max-w-xs">
 			<label className="block text-sm font-medium mb-2">Admin theme</label>
-			<Select value={theme} onValueChange={(v) => setTheme((v as "light") || "dark")}>
+			<Select
+				value={theme}
+				onValueChange={async (v) => {
+					const next = (v as "light" | "dark") ?? "light";
+					setTheme(next); // updates context + persists to DB via provider
+				}}
+			>
 				<SelectTrigger>
 					<SelectValue placeholder="Select theme" />
 				</SelectTrigger>
