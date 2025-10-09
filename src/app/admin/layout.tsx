@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 				<div className="mx-auto max-w-7xl">
 					<AdminTopbar />
 					<div className="flex gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8">
-						<AdminSidebar />
+						<AdminSidebar user={{ name: session.user.name, email: session.user.email }} />
 						<div className="flex-1 py-4 sm:py-6 min-h-screen">
 							<div className="mb-3">
 								<Link
