@@ -15,6 +15,7 @@ export interface UserPayload {
 	id: string;
 	email: string;
 	name?: string;
+	role?: "admin" | "customer";
 }
 
 export interface SessionData extends JWTPayload {
@@ -58,7 +59,12 @@ export async function auth() {
 	return data;
 }
 
-export async function createPersistentSession(user: { id: string; email: string; name?: string }) {
+export async function createPersistentSession(user: {
+	id: string;
+	email: string;
+	name?: string;
+	role?: "admin" | "customer";
+}) {
 	const expires = Date.now() + SessionDuration;
 	const payload: SessionData = { user, expires };
 	const jwt = await encrypt(payload);

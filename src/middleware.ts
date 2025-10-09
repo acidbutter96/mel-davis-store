@@ -29,6 +29,7 @@ export async function middleware(request: NextRequest) {
 	const isApi = pathname.startsWith("/api");
 	const isAuthPublic = pathname === "/api/auth/login" || pathname === "/api/auth/register";
 	const pageProtected = pathname.startsWith("/orders") || pathname.startsWith("/user");
+	const isAdmin = pathname.startsWith("/admin");
 
 	if (isApi && !isAuthPublic) {
 		const ok = await verifyAuth(request);
@@ -41,9 +42,17 @@ export async function middleware(request: NextRequest) {
 		if (!ok) return NextResponse.redirect(new URL("/login", request.url));
 		return NextResponse.next();
 	}
+	if (isAdmin) {
+		const session = request.cookies.get("session")?.value;
+		if (!session) return NextResponse.redirect(new URL("/login", request.url));
+		const data = await coreDecrypt(session);
+		if (!data || data.expires <= Date.now()) return NextResponse.redirect(new URL("/login", request.url));
+		if (data.user.role !== "admin") return NextResponse.redirect(new URL("/forbidden", request.url));
+		return NextResponse.next();
+	}
 	return NextResponse.next();
 }
 
 export const config = {
-	matcher: ["/api/:path*", "/orders/:path*", "/user/:path*"],
+	matcher: ["/api/:path*", "/orders/:path*", "/user/:path*", "/admin/:path*"],
 };

@@ -22,6 +22,11 @@ export const Nav = async () => {
 					<SearchNav />
 				</div>
 				<CartIcon />
+				{session?.user.role === "admin" && (
+					<YnsLink href="/admin" className="mr-2 text-sm font-medium hover:underline">
+						Admin
+					</YnsLink>
+				)}
 				<YnsLink href={session ? "/user" : "/login"}>
 					<UserIcon className="hover:text-neutral-500" />
 				</YnsLink>

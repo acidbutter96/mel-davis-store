@@ -37,9 +37,9 @@ export async function login(_state: unknown, formData: FormData): Promise<{ erro
 		const db = await getDb();
 		const user = await db
 			.collection("users")
-			.findOne<{ _id: unknown; email: string; passwordHash?: string; name?: string }>(
+			.findOne<{ _id: unknown; email: string; passwordHash?: string; name?: string; role?: string }>(
 				{ email },
-				{ projection: { email: 1, passwordHash: 1, name: 1 } },
+				{ projection: { email: 1, passwordHash: 1, name: 1, role: 1 } },
 			);
 		if (!user || !user.passwordHash) return { error: "Invalid credentials" };
 		const ok = await bcrypt.compare(password, user.passwordHash);
@@ -100,7 +100,12 @@ export async function login(_state: unknown, formData: FormData): Promise<{ erro
 		if (!overrideApplied) {
 			console.debug("[login] no cart override");
 		}
-		await createPersistentSession({ id: String(user._id), email: user.email, name: user.name });
+		await createPersistentSession({
+			id: String(user._id),
+			email: user.email,
+			name: user.name,
+			role: user.role === "admin" ? "admin" : "customer",
+		});
 		redirect("/");
 	} catch (err: unknown) {
 		if (

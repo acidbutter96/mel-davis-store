@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 		const db = await getDb();
 		const user = await db
 			.collection("users")
-			.findOne<{ _id: unknown; email: string; passwordHash?: string; name?: string }>({
+			.findOne<{ _id: unknown; email: string; passwordHash?: string; name?: string; role?: string }>({
 				email: email.toLowerCase(),
 			});
 		if (!user || !user.passwordHash) {
@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
 			.sign(getJwtSecretKey());
 
 		return new Response(
-			JSON.stringify({ token, user: { _id: String(user._id), email: user.email, name: user.name } }),
+			JSON.stringify({
+				token,
+				user: { _id: String(user._id), email: user.email, name: user.name, role: user.role ?? "customer" },
+			}),
 			{ status: 200 },
 		);
 	} catch (err) {
