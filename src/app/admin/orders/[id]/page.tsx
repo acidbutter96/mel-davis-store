@@ -45,10 +45,11 @@ export default async function AdminOrderDetails({ params }: { params: { id: stri
 				<CardContent className="space-y-2">
 					<div>
 						<span className="text-muted-foreground">ID:</span>{" "}
-						<span className="font-mono text-sm">{p.id}</span>
+						<span className="font-mono text-sm break-all">{p.id}</span>
 					</div>
 					<div>
-						<span className="text-muted-foreground">User:</span> {doc.email}
+						<span className="text-muted-foreground">User:</span>{" "}
+						<span className="break-all">{doc.email}</span>
 					</div>
 					<div className="flex items-center gap-2">
 						<span className="text-muted-foreground">Status:</span>
@@ -73,9 +74,9 @@ export default async function AdminOrderDetails({ params }: { params: { id: stri
 				<CardContent>
 					<ul className="divide-y">
 						{(p.items || []).map((it, idx) => (
-							<li key={idx} className="py-2 flex items-center justify-between">
-								<div>
-									<div className="font-medium">{it.name || "—"}</div>
+							<li key={idx} className="py-2 flex items-center justify-between gap-3">
+								<div className="min-w-0">
+									<div className="font-medium break-words">{it.name || "—"}</div>
 									<div className="text-sm text-muted-foreground">Qty: {it.quantity}</div>
 								</div>
 								<div className="text-sm">

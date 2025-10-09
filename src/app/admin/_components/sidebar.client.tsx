@@ -1,23 +1,14 @@
 "use client";
 
-import { LayoutDashboard, ShoppingCart, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
-
-const navItems: NavItem[] = [
-	{ href: "/admin", label: "Overview", icon: LayoutDashboard },
-	{ href: "/admin/orders", label: "Orders", icon: ShoppingCart },
-	{ href: "/admin/users", label: "Users", icon: Users },
-	// { href: "/admin/settings", label: "Settings", icon: Settings }, // Reserved for future
-];
+import { adminNavItems } from "./nav-config";
 
 export function AdminSidebar() {
 	const pathname = usePathname();
 	return (
-		<aside className="hidden md:flex md:w-64 lg:w-72 xl:w-80 flex-col border-r bg-background h-screen sticky top-0">
+		<aside className="hidden md:flex md:w-60 lg:w-64 xl:w-72 flex-col border-r bg-background h-[calc(100dvh)] sticky top-0">
 			<div className="px-4 py-4 border-b">
 				<Link href="/admin" className="flex items-center gap-2 font-semibold">
 					<span className="inline-block h-6 w-6 rounded bg-primary/10" />
@@ -25,7 +16,7 @@ export function AdminSidebar() {
 				</Link>
 			</div>
 			<nav className="p-2 space-y-1">
-				{navItems.map(({ href, label, icon: Icon }) => {
+				{adminNavItems.map(({ href, label, icon: Icon }) => {
 					const active = pathname === href || (href !== "/admin" && pathname?.startsWith(href));
 					return (
 						<Link

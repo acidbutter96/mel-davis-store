@@ -23,7 +23,7 @@ export default async function AdminUserDetails({ params }: { params: { id: strin
 	if (!user) redirect("/admin/users");
 
 	return (
-		<main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+		<main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
 			<div>
 				<h1 className="text-2xl font-semibold">User details</h1>
 			</div>
@@ -33,7 +33,8 @@ export default async function AdminUserDetails({ params }: { params: { id: strin
 				</CardHeader>
 				<CardContent className="space-y-1">
 					<div>
-						<span className="text-muted-foreground">Email:</span> {user.email}
+						<span className="text-muted-foreground">Email:</span>{" "}
+						<span className="break-all">{user.email}</span>
 					</div>
 					{user.name && (
 						<div>
@@ -68,14 +69,14 @@ export default async function AdminUserDetails({ params }: { params: { id: strin
 				<CardContent>
 					<ul className="divide-y">
 						{(user.purchases || []).map((p: { id: string; status: string; createdAt: string | Date }) => (
-							<li key={p.id} className="py-3 flex items-center justify-between">
+							<li key={p.id} className="py-3 flex items-center justify-between gap-3">
 								<div>
 									<div className="font-medium capitalize">{p.status}</div>
 									<div className="text-sm text-muted-foreground">
 										{new Date(p.createdAt).toLocaleString()}
 									</div>
 								</div>
-								<div className="text-sm font-mono">{p.id}</div>
+								<div className="text-sm font-mono break-all">{p.id}</div>
 							</li>
 						))}
 						{(!user.purchases || user.purchases.length === 0) && (

@@ -263,38 +263,40 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 						<CardTitle>Recent purchases</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>User</TableHead>
-									<TableHead>Amount</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead>Date</TableHead>
-									<TableHead>ID</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{recent.map((p) => (
-									<TableRow key={p.id}>
-										<TableCell>{p.userEmail}</TableCell>
-										<TableCell>{formatMoney(p.amountTotal, p.currency)}</TableCell>
-										<TableCell className="capitalize">
-											<StatusBadge status={p.status} />
-										</TableCell>
-										<TableCell>{new Date(p.createdAt).toLocaleString()}</TableCell>
-										<TableCell className="font-mono text-xs">{p.id}</TableCell>
-									</TableRow>
-								))}
-								{recent.length === 0 && (
+						<div className="w-full overflow-x-auto">
+							<Table className="min-w-[720px]">
+								<TableHeader>
 									<TableRow>
-										<TableCell colSpan={5} className="text-muted-foreground py-6">
-											No purchases yet.
-										</TableCell>
+										<TableHead>User</TableHead>
+										<TableHead>Amount</TableHead>
+										<TableHead>Status</TableHead>
+										<TableHead>Date</TableHead>
+										<TableHead>ID</TableHead>
 									</TableRow>
-								)}
-							</TableBody>
-							<TableCaption>Showing up to the last 10 purchases.</TableCaption>
-						</Table>
+								</TableHeader>
+								<TableBody>
+									{recent.map((p) => (
+										<TableRow key={p.id}>
+											<TableCell>{p.userEmail}</TableCell>
+											<TableCell>{formatMoney(p.amountTotal, p.currency)}</TableCell>
+											<TableCell className="capitalize">
+												<StatusBadge status={p.status} />
+											</TableCell>
+											<TableCell>{new Date(p.createdAt).toLocaleString()}</TableCell>
+											<TableCell className="font-mono text-xs">{p.id}</TableCell>
+										</TableRow>
+									))}
+									{recent.length === 0 && (
+										<TableRow>
+											<TableCell colSpan={5} className="text-muted-foreground py-6">
+												No purchases yet.
+											</TableCell>
+										</TableRow>
+									)}
+								</TableBody>
+								<TableCaption>Showing up to the last 10 purchases.</TableCaption>
+							</Table>
+						</div>
 					</CardContent>
 				</Card>
 			</section>
@@ -316,35 +318,37 @@ export default async function AdminPage({ searchParams }: { searchParams?: Searc
 						<CardTitle>Top customers</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>User</TableHead>
-									<TableHead className="text-right">Orders</TableHead>
-									<TableHead className="text-right">Paid</TableHead>
-									<TableHead className="text-right">Total spent</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{topCustomers.map((c) => (
-									<TableRow key={c.email}>
-										<TableCell>{c.email}</TableCell>
-										<TableCell className="text-right">{c.count}</TableCell>
-										<TableCell className="text-right">{c.paidCount}</TableCell>
-										<TableCell className="text-right">
-											{formatMoney(c.totalSpentCents, recent[0]?.currency || "USD")}
-										</TableCell>
-									</TableRow>
-								))}
-								{topCustomers.length === 0 && (
+						<div className="w-full overflow-x-auto">
+							<Table className="min-w-[640px]">
+								<TableHeader>
 									<TableRow>
-										<TableCell colSpan={4} className="text-muted-foreground py-6">
-											No customers.
-										</TableCell>
+										<TableHead>User</TableHead>
+										<TableHead className="text-right">Orders</TableHead>
+										<TableHead className="text-right">Paid</TableHead>
+										<TableHead className="text-right">Total spent</TableHead>
 									</TableRow>
-								)}
-							</TableBody>
-						</Table>
+								</TableHeader>
+								<TableBody>
+									{topCustomers.map((c) => (
+										<TableRow key={c.email}>
+											<TableCell>{c.email}</TableCell>
+											<TableCell className="text-right">{c.count}</TableCell>
+											<TableCell className="text-right">{c.paidCount}</TableCell>
+											<TableCell className="text-right">
+												{formatMoney(c.totalSpentCents, recent[0]?.currency || "USD")}
+											</TableCell>
+										</TableRow>
+									))}
+									{topCustomers.length === 0 && (
+										<TableRow>
+											<TableCell colSpan={4} className="text-muted-foreground py-6">
+												No customers.
+											</TableCell>
+										</TableRow>
+									)}
+								</TableBody>
+							</Table>
+						</div>
 					</CardContent>
 				</Card>
 			</section>

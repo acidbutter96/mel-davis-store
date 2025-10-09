@@ -23,7 +23,7 @@ export default async function AdminUsersPage() {
 		.toArray()) as unknown as UserLite[];
 
 	return (
-		<main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+		<main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-semibold">Users</h1>
 			</div>
@@ -34,9 +34,9 @@ export default async function AdminUsersPage() {
 				<CardContent>
 					<ul className="divide-y">
 						{users.map((u: UserLite) => (
-							<li key={String(u._id)} className="py-3 flex items-center justify-between">
+							<li key={String(u._id)} className="py-3 flex items-center justify-between gap-3">
 								<div>
-									<div className="font-medium">{u.email}</div>
+									<div className="font-medium break-all sm:break-normal">{u.email}</div>
 									<div className="text-sm text-muted-foreground">{u.name || "—"}</div>
 								</div>
 								<Link className="text-sm underline" href={`/admin/users/${String(u._id)}`}>
