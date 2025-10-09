@@ -38,21 +38,22 @@ export function AdminThemeProvider({
 		};
 	}, []);
 
-	// Also reflect theme on <html> so portals and base styles respond.
+	// Mark that admin theme is controlling <html> and restore on unmount only
 	useEffect(() => {
 		const root = document.documentElement;
-		const hadDark = root.classList.contains("dark");
-		const marker = "data-admin-theme-active";
-		root.setAttribute(marker, "true");
-		if (theme === "dark") root.classList.add("dark");
-		else root.classList.remove("dark");
+		const marker = "data-admin-theme-prev";
+		root.setAttribute(marker, root.classList.contains("dark") ? "1" : "0");
 		return () => {
-			// Only restore if this provider set it
-			if (root.getAttribute(marker)) {
-				root.classList.toggle("dark", hadDark);
-				root.removeAttribute(marker);
-			}
+			const prev = root.getAttribute(marker) === "1";
+			root.classList.toggle("dark", prev);
+			root.removeAttribute(marker);
 		};
+	}, []);
+
+	// Reflect current theme on <html>
+	useEffect(() => {
+		const root = document.documentElement;
+		root.classList.toggle("dark", theme === "dark");
 	}, [theme]);
 
 	const setTheme = (t: AdminTheme) => {
