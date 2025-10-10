@@ -16,31 +16,21 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 	const [pending] = useTransition();
 	const [registerError, setRegisterError] = useState<string | null>(null);
 	const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
-	const { cart, cartReady } = useCart();
+	// showForgot was replaced by recoveryMode
+	const [recoveryMode, setRecoveryMode] = useState(false);
+	const [forgotStatus, setForgotStatus] = useState<string | null>(null);
+	const { cart } = useCart();
 
-	// handle client-side registration submission
 	async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setRegisterError(null);
-		const formEl = e.currentTarget as HTMLFormElement;
-		const form = new FormData(formEl);
-		const rawEntries = Array.from(form.entries()) as [string, string][];
-		const base: Record<string, unknown> = {};
-		const address: Record<string, string> = {};
-		for (const [key, value] of rawEntries) {
-			if (key.startsWith("$ACTION")) continue;
-			if (key.startsWith("address.")) {
-				const subKey = key.slice("address.".length);
-				if (value.trim() !== "") address[subKey] = value.trim();
-			} else {
-				base[key] = value;
-			}
-		}
-		const email = String(base.email || "")
+		const form = new FormData(e.currentTarget as HTMLFormElement);
+		const body = Object.fromEntries(form.entries()) as Record<string, string>;
+		const email = String(body.email || "")
 			.trim()
 			.toLowerCase();
-		const password = String(base.password || "");
-		const name = String(base.name || "").trim();
+		const password = String(body.password || "");
+		const name = String(body.name || "").trim();
 		if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
 			setRegisterError("Enter a valid email");
 			return;
@@ -54,83 +44,20 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 			return;
 		}
 		try {
-			const avail = await fetch("/api/auth/email-available", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ email }),
-			});
-			if (avail.ok) {
-				const data = (await avail.json()) as { available?: boolean };
-				if (!data.available) {
-					setRegisterError("Email already registered");
-					return;
-				}
-			}
-		} catch {}
-
-		if (Object.keys(address).length > 0) base.address = address;
-
-		// Wait briefly for cartReady (context hydration) if not ready yet
-		if (!cartReady) {
-			const started = Date.now();
-			while (!cartReady && Date.now() - started < 300) {
-				// eslint-disable-next-line no-await-in-loop
-				await new Promise((r) => setTimeout(r, 30));
-			}
-		}
-		let effectiveCart = cart;
-		if (effectiveCart && effectiveCart.items.length > 0) {
-			console.debug("[register] using context cart", effectiveCart.items.length);
-		} else {
-			try {
-				const guestRes = await fetch("/api/cart", { method: "GET", cache: "no-store" });
-				if (guestRes.ok) {
-					const guestData = (await guestRes.json()) as {
-						cart?: { items?: { productId: string; variantId: string; quantity: number }[] };
-					};
-					if (guestData.cart?.items?.length) {
-						effectiveCart = guestData.cart as typeof effectiveCart;
-						console.debug("[register] using fallback guest cart", guestData.cart.items?.length || 0);
-					}
-				}
-			} catch (err) {
-				console.debug("[register] guest cart fetch failed", err);
-			}
-		}
-		if (effectiveCart && effectiveCart.items.length > 0) {
-			(base as Record<string, unknown>).cart = {
-				items: effectiveCart.items.map((i) => ({
-					productId: i.productId,
-					variantId: i.variantId,
-					quantity: i.quantity,
-				})),
-			};
-		} else {
-			console.debug("[register] no cart items to send");
-		}
-		const payload = { ...base, email };
-		try {
 			const res = await fetch("/api/auth/register", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
+				body: JSON.stringify(body),
 			});
-			if (!res.ok) {
-				if (res.status === 409) {
-					setRegisterError("Email already registered");
-				} else if (res.status === 400) {
-					setRegisterError("Invalid data. Please check the fields.");
-				} else {
-					setRegisterError("Failed to register. Please try again.");
-				}
+			if (res.ok) {
+				setRegisteredEmail(email);
+				setMode("pending");
 				return;
 			}
-			setRegisteredEmail(email);
-			setMode("pending");
-			return;
+			const data = (await res.json()) as unknown as { error?: string };
+			setRegisterError(data?.error || "Failed to register");
 		} catch (err) {
-			console.error("register failed", err);
-			setRegisterError("Unexpected error. Please try again.");
+			setRegisterError("Unexpected error");
 		}
 	}
 
@@ -144,40 +71,88 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					{mode === "login" && (
-						<form action={action}>
-							{cart && cart.items.length > 0 && (
-								<input
-									type="hidden"
-									name="cart"
-									value={JSON.stringify({
-										items: cart.items.map((i) => ({
-											productId: i.productId,
-											variantId: i.variantId,
-											quantity: i.quantity,
-										})),
-									})}
-								/>
-							)}
-							<div className="grid gap-6">
-								{state?.error && (
-									<p className="text-sm rounded-md bg-destructive/10 text-destructive px-3 py-2 border border-destructive/30">
-										{state.error}
-									</p>
+					{mode === "login" && !recoveryMode && (
+						<>
+							<form action={action}>
+								{cart && cart.items.length > 0 && (
+									<input type="hidden" name="cart" value={JSON.stringify({ items: cart.items })} />
 								)}
-								<div className="grid gap-2">
-									<Label htmlFor="email">Email</Label>
-									<Input name="email" type="email" placeholder="m@example.com" required />
+								<div className="grid gap-6">
+									{state?.error && (
+										<p className="text-sm rounded-md bg-destructive/10 text-destructive px-3 py-2 border border-destructive/30">
+											{state.error}
+										</p>
+									)}
+									<div className="grid gap-2">
+										<Label htmlFor="email">Email</Label>
+										<Input name="email" type="email" placeholder="m@example.com" required />
+									</div>
+									<div className="grid gap-2">
+										<Label htmlFor="password">Password</Label>
+										<PasswordInput name="password" required />
+									</div>
+									<Button type="submit" className="w-full" disabled={pending}>
+										{pending ? "Signing in..." : "Login"}
+									</Button>
 								</div>
-								<div className="grid gap-2">
-									<Label htmlFor="password">Password</Label>
-									<PasswordInput name="password" required />
-								</div>
-								<Button type="submit" className="w-full" disabled={pending}>
-									{pending ? "Signing in..." : "Login"}
-								</Button>
+							</form>
+							<div className="mt-2 text-right">
+								<button type="button" className="underline text-sm" onClick={() => setRecoveryMode(true)}>
+									Forgot your password?
+								</button>
 							</div>
-						</form>
+						</>
+					)}
+
+					{mode === "login" && recoveryMode && (
+						<div>
+							<form
+								onSubmit={async (e) => {
+									e.preventDefault();
+									setForgotStatus(null);
+									const form = new FormData(e.currentTarget as HTMLFormElement);
+									const email = String(form.get("email") || "")
+										.trim()
+										.toLowerCase();
+									if (!email) {
+										setForgotStatus("Enter your email");
+										return;
+									}
+									try {
+										const res = await fetch("/api/auth/forgot-password", {
+											method: "POST",
+											headers: { "Content-Type": "application/json" },
+											body: JSON.stringify({ email }),
+										});
+										if (res.ok) setForgotStatus("Recovery email sent if the address exists");
+										else setForgotStatus("Failed to send recovery email");
+									} catch (err) {
+										setForgotStatus("Unexpected error");
+									}
+								}}
+							>
+								<div className="grid gap-2">
+									<Label htmlFor="forgot-email">Email</Label>
+									<Input id="forgot-email" name="email" type="email" />
+									<div className="flex gap-2">
+										<Button type="submit" className="flex-1">
+											Send recovery email
+										</Button>
+										<Button
+											type="button"
+											variant="ghost"
+											onClick={() => {
+												setRecoveryMode(false);
+												setForgotStatus(null);
+											}}
+										>
+											Back to login
+										</Button>
+									</div>
+									{forgotStatus && <p className="text-sm mt-2">{forgotStatus}</p>}
+								</div>
+							</form>
+						</div>
 					)}
 					{mode === "register" && (
 						<form onSubmit={handleRegister}>
@@ -198,38 +173,6 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 								<div className="grid gap-2">
 									<Label htmlFor="password">Password</Label>
 									<PasswordInput name="password" required />
-								</div>
-								<div className="grid gap-2">
-									<Label htmlFor="phone">Phone</Label>
-									<Input name="phone" placeholder="(11) 99999-0000" />
-								</div>
-								<div className="grid grid-cols-2 gap-2">
-									<div className="grid gap-2">
-										<Label htmlFor="line1">Address</Label>
-										<Input name="address.line1" placeholder="Street" />
-									</div>
-									<div className="grid gap-2">
-										<Label htmlFor="line2">Line 2</Label>
-										<Input name="address.line2" placeholder="Apt" />
-									</div>
-								</div>
-								<div className="grid grid-cols-3 gap-2">
-									<div className="grid gap-2">
-										<Label htmlFor="city">City</Label>
-										<Input name="address.city" />
-									</div>
-									<div className="grid gap-2">
-										<Label htmlFor="state">State</Label>
-										<Input name="address.state" />
-									</div>
-									<div className="grid gap-2">
-										<Label htmlFor="postalCode">Postal code</Label>
-										<Input name="address.postalCode" />
-									</div>
-								</div>
-								<div className="grid gap-2">
-									<Label htmlFor="country">Country (ISO2)</Label>
-									<Input name="address.country" placeholder="BR" />
 								</div>
 								<Button type="submit" className="w-full" disabled={pending}>
 									{pending ? "Submitting..." : "Create account"}

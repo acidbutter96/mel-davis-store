@@ -27,7 +27,11 @@ async function verifyAuth(request: NextRequest) {
 export async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 	const isApi = pathname.startsWith("/api");
-	const isAuthPublic = pathname === "/api/auth/login" || pathname === "/api/auth/register";
+	const isAuthPublic =
+		pathname === "/api/auth/login" ||
+		pathname === "/api/auth/register" ||
+		pathname === "/api/auth/forgot-password" ||
+		pathname === "/api/auth/reset-password";
 	const pageProtected = pathname.startsWith("/orders") || pathname.startsWith("/user");
 	const isAdmin = pathname.startsWith("/admin");
 
