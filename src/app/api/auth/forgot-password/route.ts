@@ -19,26 +19,31 @@ export async function POST(req: Request) {
 			await db
 				.collection("users")
 				.updateOne({ _id: user._id }, { $set: { passwordReset: { token, expiresAt } } });
-			try {
-				const { passwordResetEmailHtml } = await import("@/lib/email-templates/password-reset");
-				const resetUrl = new URL(
-					"/reset-password",
-					process.env.NEXT_PUBLIC_URL || "http://localhost:3000",
-				).toString();
-				const html = passwordResetEmailHtml({
-					name: user.name || "",
-					resetUrl: `${resetUrl}?token=${token}`,
-					supportEmail: env.SMTP_USER,
-				});
-				const { sendEmail } = await import("@/lib/email");
-				await sendEmail({
-					to: user.email,
-					subject: "Reset your password",
-					text: `${resetUrl}?token=${token}`,
-					html,
-				});
-			} catch (err) {
-				console.error("Failed to send password reset email", err);
+			// Only attempt to send email in non-test environments or when emailing is enabled
+			if (process.env.NODE_ENV !== "test" && process.env.SKIP_EMAILS !== "1") {
+				try {
+					const { passwordResetEmailHtml } = await import("@/lib/email-templates/password-reset");
+					const resetUrl = new URL(
+						"/reset-password",
+						process.env.NEXT_PUBLIC_URL || "http://localhost:3000",
+					).toString();
+					const html = passwordResetEmailHtml({
+						name: user.name || "",
+						resetUrl: `${resetUrl}?token=${token}`,
+						supportEmail: env.SMTP_USER,
+					});
+					const { sendEmail } = await import("@/lib/email");
+					await sendEmail({
+						to: user.email,
+						subject: "Reset your password",
+						text: `${resetUrl}?token=${token}`,
+						html,
+					});
+				} catch (err) {
+					console.error("Failed to send password reset email", err);
+				}
+			} else {
+				console.info("Skipping sending password reset email in test or disabled email environment");
 			}
 		}
 		return new Response(JSON.stringify({ ok: true }), { status: 200 });

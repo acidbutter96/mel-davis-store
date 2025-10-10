@@ -11,18 +11,9 @@ export default function ResetPasswordPage() {
 	const [status, setStatus] = useState<string | null>(null);
 	const [passwordValue, setPasswordValue] = useState("");
 	const [confirmValue, setConfirmValue] = useState("");
-	const [countdown, setCountdown] = useState<number | null>(null);
+	const [validating, setValidating] = useState(true);
+	const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 	const router = useRouter();
-
-	useEffect(() => {
-		if (countdown === null) return;
-		if (countdown <= 0) {
-			router.push("/login");
-			return;
-		}
-		const t = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
-		return () => clearTimeout(t);
-	}, [countdown, router]);
 
 	const strength = useMemo(() => {
 		const pw = passwordValue;
@@ -36,11 +27,52 @@ export default function ResetPasswordPage() {
 	}, [passwordValue]);
 	const isStrong = strength.length && strength.upper && strength.lower && strength.digit && strength.special;
 
+	useEffect(() => {
+		let mounted = true;
+		async function validate() {
+			if (!token) {
+				if (mounted) {
+					setTokenValid(false);
+					setValidating(false);
+				}
+				return;
+			}
+			try {
+				const res = await fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`);
+				const data = (await res.json()) as { valid?: boolean; error?: string };
+				if (mounted) {
+					setTokenValid(!!data?.valid);
+					if (!data?.valid && data?.error) setStatus(data.error);
+					setValidating(false);
+				}
+			} catch (err) {
+				if (mounted) {
+					setTokenValid(false);
+					setStatus("Unable to validate token");
+					setValidating(false);
+				}
+			}
+		}
+		validate();
+		return () => {
+			mounted = false;
+		};
+	}, [token]);
+
 	return (
 		<div className="max-w-md mx-auto p-6">
 			<h2 className="text-xl font-semibold mb-4">Reset your password</h2>
-			{!token ? (
-				<p className="text-sm text-muted-foreground">Missing token. Use the link from your email.</p>
+			{validating ? (
+				<p className="text-sm text-muted-foreground">Validating token...</p>
+			) : tokenValid === false ? (
+				<div>
+					<p className="text-sm text-red-500">{status || "Invalid or expired token."}</p>
+					<div className="mt-3">
+						<Button variant="secondary" onClick={() => router.push("/login")}>
+							Back to login
+						</Button>
+					</div>
+				</div>
 			) : (
 				<form
 					onSubmit={async (e) => {
@@ -55,8 +87,9 @@ export default function ResetPasswordPage() {
 								body: JSON.stringify({ token, password: passwordValue }),
 							});
 							if (res.ok) {
-								setStatus("Password updated. Redirecting to login...");
-								setCountdown(3);
+								// Immediately navigate to login and show flash
+								router.push("/login?reset=1");
+								return;
 							} else {
 								const data = (await res.json()) as { error?: string };
 								setStatus(data?.error || "Failed to reset password");
@@ -102,9 +135,7 @@ export default function ResetPasswordPage() {
 					</div>
 				</form>
 			)}
-			{countdown !== null && (
-				<div className="mt-4 text-center text-sm">Redirecting to login in {countdown}...</div>
-			)}
+			{/* immediate redirect handled on success */}
 		</div>
 	);
 }

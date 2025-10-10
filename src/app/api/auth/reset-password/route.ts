@@ -43,12 +43,38 @@ export async function POST(req: Request) {
 				{ $set: { passwordHash: hashed }, $unset: { passwordReset: "" } },
 			);
 		if (!upd || upd.modifiedCount !== 1) {
-			return new Response(JSON.stringify({ error: "Failed to update password" }), { status: 500 });
+			// If the update didn't apply, the token is likely already used or invalid
+			return new Response(JSON.stringify({ error: "Invalid or already used token" }), { status: 400 });
 		}
 
 		return new Response(JSON.stringify({ ok: true }));
 	} catch (err) {
 		console.error(err);
 		return new Response(JSON.stringify({ error: "Invalid request" }), { status: 400 });
+	}
+}
+
+export async function GET(req: Request) {
+	try {
+		const url = new URL(req.url);
+		const token = url.searchParams.get("token");
+		if (!token)
+			return new Response(JSON.stringify({ valid: false, error: "Missing token" }), { status: 400 });
+
+		const db = await getDb();
+		const user = await db.collection("users").findOne({ "passwordReset.token": token });
+		if (!user) return new Response(JSON.stringify({ valid: false, error: "Invalid token" }), { status: 200 });
+
+		const expiresAtRaw = user.passwordReset?.expiresAt;
+		const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
+		const now = new Date();
+		if (!expiresAt || expiresAt <= now) {
+			return new Response(JSON.stringify({ valid: false, error: "Expired token" }), { status: 200 });
+		}
+
+		return new Response(JSON.stringify({ valid: true }), { status: 200 });
+	} catch (err) {
+		console.error(err);
+		return new Response(JSON.stringify({ valid: false, error: "Server error" }), { status: 500 });
 	}
 }
