@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 		<AdminThemeProvider initialTheme={initialTheme}>
 			{/* Ensure admin pages inherit background/foreground for light/dark from the provider */}
 			<div className="min-h-dvh bg-background text-foreground">
-				<div className="mx-auto max-w-7xl">
+				<div className="mx-auto max-w-full sm:max-w-screen-md lg:max-w-5xl">
 					<AdminTopbar />
 					<div className="flex gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8">
 						<AdminSidebar user={{ name: session.user.name, email: session.user.email }} />

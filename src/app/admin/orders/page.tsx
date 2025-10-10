@@ -75,7 +75,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
 	const items = (await db.collection("users").aggregate(pipeline).toArray()) as unknown as AggOrderItem[];
 
 	return (
-		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+		<main className="mx-auto max-w-full sm:max-w-screen-md lg:max-w-5xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
 			<div className="space-y-2">
 				<h1 className="text-2xl font-semibold">Orders</h1>
 				<AdminFilters defaultStatus={status} defaultPeriod={period} defaultSort={sort} />
@@ -85,49 +85,51 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
 					<CardTitle>Recent orders</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>User</TableHead>
-								<TableHead>Amount</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead>Date</TableHead>
-								<TableHead>ID</TableHead>
-								<TableHead></TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{items.map((it: AggOrderItem) => (
-								<TableRow key={it.purchases.id}>
-									<TableCell>{it.email}</TableCell>
-									<TableCell>
-										{new Intl.NumberFormat("en-US", {
-											style: "currency",
-											currency: it.purchases.currency?.toUpperCase?.() || "USD",
-										}).format((it.purchases.amountTotal || 0) / 100)}
-									</TableCell>
-									<TableCell className="capitalize">
-										<StatusBadge status={it.purchases.status} />
-									</TableCell>
-									<TableCell>{new Date(it.purchases.createdAt).toLocaleString()}</TableCell>
-									<TableCell className="font-mono text-xs">{it.purchases.id}</TableCell>
-									<TableCell className="text-right">
-										<Link className="underline" href={`/admin/orders/${it.purchases.id}`}>
-											Details
-										</Link>
-									</TableCell>
-								</TableRow>
-							))}
-							{items.length === 0 && (
+					<div className="w-full overflow-x-auto">
+						<Table className="min-w-[640px]">
+							<TableHeader>
 								<TableRow>
-									<TableCell colSpan={6} className="text-muted-foreground py-6">
-										No orders found.
-									</TableCell>
+									<TableHead>User</TableHead>
+									<TableHead>Amount</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead>Date</TableHead>
+									<TableHead>ID</TableHead>
+									<TableHead></TableHead>
 								</TableRow>
-							)}
-						</TableBody>
-						<TableCaption>Showing up to 50 orders.</TableCaption>
-					</Table>
+							</TableHeader>
+							<TableBody>
+								{items.map((it: AggOrderItem) => (
+									<TableRow key={it.purchases.id}>
+										<TableCell className="break-all">{it.email}</TableCell>
+										<TableCell>
+											{new Intl.NumberFormat("en-US", {
+												style: "currency",
+												currency: it.purchases.currency?.toUpperCase?.() || "USD",
+											}).format((it.purchases.amountTotal || 0) / 100)}
+										</TableCell>
+										<TableCell className="capitalize">
+											<StatusBadge status={it.purchases.status} />
+										</TableCell>
+										<TableCell>{new Date(it.purchases.createdAt).toLocaleString()}</TableCell>
+										<TableCell className="font-mono text-xs break-all">{it.purchases.id}</TableCell>
+										<TableCell className="text-right">
+											<Link className="underline" href={`/admin/orders/${it.purchases.id}`}>
+												Details
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+								{items.length === 0 && (
+									<TableRow>
+										<TableCell colSpan={6} className="text-muted-foreground py-6">
+											No orders found.
+										</TableCell>
+									</TableRow>
+								)}
+							</TableBody>
+							<TableCaption>Showing up to 50 orders.</TableCaption>
+						</Table>
+					</div>
 				</CardContent>
 			</Card>
 		</main>

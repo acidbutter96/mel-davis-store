@@ -183,14 +183,14 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 	// StatusBadge is shared in ui/status-badge
 
 	return (
-		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 bg-background text-foreground">
+		<main className="mx-auto max-w-full sm:max-w-screen-md lg:max-w-5xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 bg-background text-foreground">
 			<div className="space-y-3">
 				<h1 className="text-2xl font-semibold">Admin Dashboard</h1>
 				<p className="text-muted-foreground">High-level overview of your store.</p>
 				<AdminFilters defaultStatus={status} defaultPeriod={period} defaultSort={sort} />
 			</div>
 
-			<section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<section className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
 				<Card>
 					<CardHeader>
 						<CardTitle className="text-sm text-muted-foreground">Users</CardTitle>
@@ -265,7 +265,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 					</CardHeader>
 					<CardContent>
 						<div className="w-full overflow-x-auto">
-							<Table className="min-w-[720px]">
+							<Table className="min-w-[640px]">
 								<TableHeader>
 									<TableRow>
 										<TableHead>User</TableHead>
@@ -278,13 +278,13 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
 								<TableBody>
 									{recent.map((p) => (
 										<TableRow key={p.id}>
-											<TableCell>{p.userEmail}</TableCell>
+											<TableCell className="break-all">{p.userEmail}</TableCell>
 											<TableCell>{formatMoney(p.amountTotal, p.currency)}</TableCell>
 											<TableCell className="capitalize">
 												<StatusBadge status={p.status} />
 											</TableCell>
 											<TableCell>{new Date(p.createdAt).toLocaleString()}</TableCell>
-											<TableCell className="font-mono text-xs">{p.id}</TableCell>
+											<TableCell className="font-mono text-xs break-all">{p.id}</TableCell>
 										</TableRow>
 									))}
 									{recent.length === 0 && (

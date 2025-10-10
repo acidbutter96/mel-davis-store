@@ -40,7 +40,7 @@ export function AdminFilters({ defaultStatus, defaultPeriod, defaultSort }: Prop
 						submit();
 					}}
 				>
-					<SelectTrigger className="w-[180px]">
+					<SelectTrigger className="w-[150px] sm:w-[180px]">
 						<SelectValue placeholder="All" />
 					</SelectTrigger>
 					<SelectContent>
@@ -69,7 +69,7 @@ export function AdminFilters({ defaultStatus, defaultPeriod, defaultSort }: Prop
 						submit();
 					}}
 				>
-					<SelectTrigger className="w-[160px]">
+					<SelectTrigger className="w-[140px] sm:w-[160px]">
 						<SelectValue placeholder="30 days" />
 					</SelectTrigger>
 					<SelectContent>
@@ -92,7 +92,7 @@ export function AdminFilters({ defaultStatus, defaultPeriod, defaultSort }: Prop
 						submit();
 					}}
 				>
-					<SelectTrigger className="w-[200px]">
+					<SelectTrigger className="w-[170px] sm:w-[200px]">
 						<SelectValue placeholder="Date desc" />
 					</SelectTrigger>
 					<SelectContent>

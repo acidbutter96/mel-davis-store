@@ -28,5 +28,11 @@ export function PaidVsFailedDonut({ paid, failed, height = 200 }: PaidVsFailedDo
 		}),
 		[theme],
 	);
-	return <ReactApexChart options={options} series={series} type="donut" height={height} />;
+	return (
+		<div className="overflow-x-auto">
+			<div className="min-w-[320px]">
+				<ReactApexChart options={options} series={series} type="donut" height={height} />
+			</div>
+		</div>
+	);
 }
