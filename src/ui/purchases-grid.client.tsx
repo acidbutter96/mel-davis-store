@@ -244,33 +244,50 @@ export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
 										] as const;
 										const curr = details.fulfillment?.status;
 										const activeIdx = curr ? steps.findIndex((s) => s.key === curr) : -1;
+										const pct = activeIdx >= 0 ? (activeIdx / (steps.length - 1)) * 100 : 0;
 										return (
-											<>
-												<div className="flex items-center gap-3">
+											<div className="space-y-2">
+												<div className="relative h-6 w-full">
+													<div className="absolute left-0 right-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-muted-foreground/20" />
+													<div
+														className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-primary/70 transition-all"
+														style={{ width: `${pct}%` }}
+													/>
 													{steps.map((s, idx) => {
+														const leftPct = (idx / (steps.length - 1)) * 100;
 														const done = activeIdx >= idx;
 														return (
-															<div key={s.key} className="flex items-center">
+															<div
+																key={s.key}
+																className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+																style={{ left: `${leftPct}%` }}
+															>
 																<div
-																	className={`size-4 rounded-full ${done ? "bg-primary" : "bg-muted-foreground/30"}`}
+																	className={`size-4 rounded-full border ${
+																		done
+																			? "bg-primary border-primary"
+																			: "bg-background border-muted-foreground/30"
+																	}`}
 																/>
-																{idx < steps.length - 1 && (
-																	<div
-																		className={`mx-2 h-[3px] w-20 ${done ? "bg-primary/70" : "bg-muted-foreground/20"}`}
-																	/>
-																)}
 															</div>
 														);
 													})}
 												</div>
-												<div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
-													{steps.map((s) => (
-														<div key={s.key} className="w-20 text-center">
-															{s.label}
-														</div>
-													))}
+												<div className="relative  h-4 mx-4">
+													{steps.map((s, idx) => {
+														const leftPct = (idx / (steps.length - 1)) * 100;
+														return (
+															<div
+																key={s.key}
+																className="absolute -translate-x-1/2 text-[11px] text-muted-foreground"
+																style={{ left: `${leftPct}%` }}
+															>
+																<div className="whitespace-nowrap text-center">{s.label}</div>
+															</div>
+														);
+													})}
 												</div>
-											</>
+											</div>
 										);
 									})()}
 								</div>
