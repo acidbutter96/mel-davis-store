@@ -110,5 +110,8 @@
 	"/order.paymentStatus.requires_capture": "キャプチャが必要です",
 	"/order.paymentStatus.requires_confirmation": "確認が必要です",
 	"/order.paymentStatus.requires_payment_method": "支払い方法が必要です",
-	"/order.paymentStatus.succeeded": "成功しました"
+	"/order.paymentStatus.succeeded": "成功しました",
+	"/order.fulfillmentStatus.received": "受領",
+	"/order.fulfillmentStatus.producing": "生産中",
+	"/order.fulfillmentStatus.shipped": "出荷済み"
 }

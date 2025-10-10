@@ -110,5 +110,8 @@
 	"/order.paymentStatus.requires_capture": "Capture requise",
 	"/order.paymentStatus.requires_confirmation": "Confirmation requise",
 	"/order.paymentStatus.requires_payment_method": "Méthode de paiement requise",
-	"/order.paymentStatus.succeeded": "Réussi"
+	"/order.paymentStatus.succeeded": "Réussi",
+	"/order.fulfillmentStatus.received": "Reçu",
+	"/order.fulfillmentStatus.producing": "En production",
+	"/order.fulfillmentStatus.shipped": "Expédié"
 }

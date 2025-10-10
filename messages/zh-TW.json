@@ -110,5 +110,8 @@
 	"/order.paymentStatus.requires_capture": "需要扣款",
 	"/order.paymentStatus.requires_confirmation": "需要確認",
 	"/order.paymentStatus.requires_payment_method": "需要支付方式",
-	"/order.paymentStatus.succeeded": "已成功"
+	"/order.paymentStatus.succeeded": "已成功",
+	"/order.fulfillmentStatus.received": "已接收",
+	"/order.fulfillmentStatus.producing": "製作中",
+	"/order.fulfillmentStatus.shipped": "已出貨"
 }

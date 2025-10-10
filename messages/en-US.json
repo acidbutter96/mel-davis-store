@@ -111,5 +111,8 @@
 	"/order.paymentStatus.requires_capture": "Requires Capture",
 	"/order.paymentStatus.requires_confirmation": "Requires Confirmation",
 	"/order.paymentStatus.requires_payment_method": "Requires Payment Method",
-	"/order.paymentStatus.succeeded": "Succeeded"
+	"/order.paymentStatus.succeeded": "Succeeded",
+	"/order.fulfillmentStatus.received": "Received",
+	"/order.fulfillmentStatus.producing": "Producing",
+	"/order.fulfillmentStatus.shipped": "Shipped"
 }
