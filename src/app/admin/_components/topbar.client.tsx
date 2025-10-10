@@ -1,14 +1,19 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { Loader2, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { adminNavItems } from "@/app/admin/_components/nav-config";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/ui/shadcn/sheet";
 
 export function AdminTopbar() {
 	const pathname = usePathname();
+	const [navigating, setNavigating] = useState(false);
+	useEffect(() => {
+		setNavigating(false);
+	}, [pathname]);
 	return (
 		<div className="md:hidden sticky top-0 z-40 border-b bg-background">
 			<div className="flex h-14 items-center justify-between px-4">
@@ -30,6 +35,13 @@ export function AdminTopbar() {
 									<SheetClose asChild key={href}>
 										<Link
 											href={href}
+											onClick={(e) => {
+												if (active) {
+													e.preventDefault();
+													return;
+												}
+												setNavigating(true);
+											}}
 											className={cn(
 												"block rounded-md px-3 py-2 text-sm",
 												active ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground",
@@ -44,6 +56,11 @@ export function AdminTopbar() {
 					</SheetContent>
 				</Sheet>
 			</div>
+			{navigating && (
+				<div className="fixed inset-0 z-[60] grid place-items-center bg-background/60">
+					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				</div>
+			)}
 		</div>
 	);
 }

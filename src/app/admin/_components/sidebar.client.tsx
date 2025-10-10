@@ -1,8 +1,10 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { adminNavItems, type NavItem } from "@/app/admin/_components/nav-config";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +12,10 @@ type SidebarUser = { name?: string | null; email?: string | null };
 
 export function AdminSidebar({ user }: { user?: SidebarUser }) {
 	const pathname = usePathname();
+	const [navigating, setNavigating] = useState(false);
+	useEffect(() => {
+		setNavigating(false);
+	}, [pathname]);
 	return (
 		<aside className="hidden md:flex md:w-60 lg:w-64 xl:w-72 flex-col border-r bg-background h-[calc(100dvh)] sticky top-0">
 			<div className="px-4 py-4 border-b">
@@ -25,6 +31,13 @@ export function AdminSidebar({ user }: { user?: SidebarUser }) {
 						<Link
 							key={href}
 							href={href}
+							onClick={(e) => {
+								if (active) {
+									e.preventDefault();
+									return;
+								}
+								setNavigating(true);
+							}}
 							className={cn(
 								"flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
 								active ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground",
@@ -61,6 +74,11 @@ export function AdminSidebar({ user }: { user?: SidebarUser }) {
 					</a>
 				</div>
 			</div>
+			{navigating && (
+				<div className="absolute inset-0 z-50 grid place-items-center bg-background/60">
+					<Loader2 className="h-6 w-6 animate-spin text-primary" />
+				</div>
+			)}
 		</aside>
 	);
 }
