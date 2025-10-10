@@ -7,4 +7,5 @@ export const adminNavItems: NavItem[] = [
 	{ href: "/admin/orders", label: "Orders", icon: ShoppingCart },
 	{ href: "/admin/users", label: "Users", icon: Users },
 	{ href: "/admin/settings", label: "Settings", icon: Settings },
+	{ href: "/admin/email-templates", label: "Email Templates", icon: Settings },
 ];
