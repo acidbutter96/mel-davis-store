@@ -1,5 +1,4 @@
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +11,11 @@ import { PasswordInput } from "@/ui/shadcn/password-input";
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
 	const [state, action] = useActionState(login, {});
-	const searchParams = useSearchParams();
-	const router = useRouter();
-	const next = searchParams.get("next");
-	const [mode, setMode] = useState<"login" | "register">("login");
-	const [pending, startTransition] = useTransition();
+
+	const [mode, setMode] = useState<"login" | "register" | "pending">("login");
+	const [pending] = useTransition();
 	const [registerError, setRegisterError] = useState<string | null>(null);
+	const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 	const { cart, cartReady } = useCart();
 
 	// handle client-side registration submission
@@ -127,21 +125,9 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 				}
 				return;
 			}
-			if (next === "checkout") {
-				startTransition(async () => {
-					const c = await fetch("/api/checkout/session", { method: "POST" });
-					if (c.ok) {
-						const data = (await c.json()) as { url?: string };
-						if (data.url) {
-							window.location.href = data.url;
-							return;
-						}
-					}
-					router.push("/checkout");
-				});
-				return;
-			}
-			router.push("/");
+			setRegisteredEmail(email);
+			setMode("pending");
+			return;
 		} catch (err) {
 			console.error("register failed", err);
 			setRegisterError("Unexpected error. Please try again.");
@@ -158,7 +144,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					{mode === "login" ? (
+					{mode === "login" && (
 						<form action={action}>
 							{cart && cart.items.length > 0 && (
 								<input
@@ -192,14 +178,15 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 								</Button>
 							</div>
 						</form>
-					) : (
+					)}
+					{mode === "register" && (
 						<form onSubmit={handleRegister}>
 							<div className="grid gap-4">
-								{registerError && (
+								{registerError ? (
 									<p className="text-sm rounded-md bg-destructive/10 text-destructive px-3 py-2 border border-destructive/30">
 										{registerError}
 									</p>
-								)}
+								) : null}
 								<div className="grid gap-2">
 									<Label htmlFor="name">Name</Label>
 									<Input name="name" required />
@@ -250,17 +237,26 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 							</div>
 						</form>
 					)}
-					<div className="mt-4 text-center text-sm">
-						{mode === "login" ? (
-							<button type="button" className="underline" onClick={() => setMode("register")}>
-								Don't have an account? Sign up
-							</button>
-						) : (
-							<button type="button" className="underline" onClick={() => setMode("login")}>
-								Already have an account? Sign in
-							</button>
-						)}
-					</div>
+					{mode === "pending" && (
+						<div className="space-y-4">
+							<h3 className="text-lg font-semibold">Registration pending</h3>
+							<p>Check your email to confirm your registration and complete payment.</p>
+							<p className="text-sm text-muted-foreground">We sent the confirmation to {registeredEmail}</p>
+						</div>
+					)}
+					{mode !== "pending" && (
+						<div className="mt-4 text-center text-sm">
+							{mode === "login" ? (
+								<button type="button" className="underline" onClick={() => setMode("register")}>
+									Don't have an account? Sign up
+								</button>
+							) : (
+								<button type="button" className="underline" onClick={() => setMode("login")}>
+									Already have an account? Sign in
+								</button>
+							)}
+						</div>
+					)}
 				</CardContent>
 			</Card>
 			<div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary  ">

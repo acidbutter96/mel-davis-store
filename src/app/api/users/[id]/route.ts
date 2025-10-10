@@ -97,14 +97,28 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
 		const body = await req.json();
 		const data = updateUserSchema.parse(body);
 		const db = await getDb();
-		// Pre-check: user exists?
+		// Pre-check: user exists and fetch verification state
 		const existingUser = await db
 			.collection("users")
-			.findOne({ _id: parsed.value }, { projection: { _id: 1 } });
+			.findOne<{ _id: ObjectId; verified?: boolean }>(
+				{ _id: parsed.value },
+				{ projection: { _id: 1, verified: 1 } },
+			);
 		if (!existingUser) {
 			const res = new Response(
 				JSON.stringify({ error: "Not found", code: "USER_NOT_FOUND_BEFORE_UPDATE", id: idRaw }),
 				{ status: 404 },
+			);
+			res.headers.set("x-route-hit", "users/[id]/PUT");
+			return res;
+		}
+		// If the user exists but is not verified, block profile updates
+		if (existingUser && existingUser.verified === false) {
+			const res = new Response(
+				JSON.stringify({ error: "Email not verified. Cannot edit profile until email is confirmed." }),
+				{
+					status: 403,
+				},
 			);
 			res.headers.set("x-route-hit", "users/[id]/PUT");
 			return res;

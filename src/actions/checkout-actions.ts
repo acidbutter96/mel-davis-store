@@ -26,10 +26,19 @@ export async function createCheckoutSession(): Promise<
 		name?: string;
 		phone?: string;
 		stripeCustomerId?: string;
+		verified?: boolean;
+		purchases?: Array<unknown>;
 	}>(
 		{ _id: new ObjectId(userId) },
-		{ projection: { cart: 1, email: 1, name: 1, phone: 1, stripeCustomerId: 1 } },
+		{ projection: { cart: 1, email: 1, name: 1, phone: 1, stripeCustomerId: 1, verified: 1, purchases: 1 } },
 	);
+
+	// If user is unverified and already has purchases, block further checkout attempts
+	if (user && user.verified === false) {
+		const hasPurchases = Array.isArray(user.purchases) && user.purchases.length > 0;
+		if (hasPurchases)
+			return { error: "Email not verified. Please verify your email to make more purchases." };
+	}
 	const minimal = user?.cart?.items || [];
 	if (minimal.length === 0) {
 		// Fallback: attempt to import cookie cart (guest cart) on first checkout after signup/login

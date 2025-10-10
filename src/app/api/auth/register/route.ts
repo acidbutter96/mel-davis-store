@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import { SignJWT } from "jose";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { env } from "@/env.mjs";
@@ -7,7 +6,6 @@ import { getCartCookieItems, getCartId } from "@/lib/cart-cookies";
 import { commerce } from "@/lib/commerce-stripe";
 import { sendEmail } from "@/lib/email";
 import { ensureIndexes, getDb } from "@/lib/mongodb";
-import { createPersistentSession } from "@/lib/session";
 
 const registerSchema = z.object({
 	email: z.string().email(),
@@ -50,10 +48,6 @@ const registerSchema = z.object({
 		)
 		.optional(),
 });
-
-function getJwtSecretKey() {
-	return new TextEncoder().encode(env.JWT_SECRET);
-}
 
 export async function POST(req: Request) {
 	try {
@@ -134,10 +128,8 @@ export async function POST(req: Request) {
 			updatedAt: now,
 		};
 
-		const res = await db.collection("users").insertOne(userDoc);
+		await db.collection("users").insertOne(userDoc);
 		console.debug("[register] user inserted with cart?", Boolean(userDoc.cart));
-
-		const userId = res.insertedId.toString();
 
 		const verifyUrl = new URL(
 			"/api/auth/verify",
@@ -158,20 +150,7 @@ export async function POST(req: Request) {
 			});
 		} catch {}
 
-		await createPersistentSession({ id: userId, email: emailLower, name: data.name, role: "customer" });
-		const legacyToken = await new SignJWT({ sub: userId, email: emailLower })
-			.setProtectedHeader({ alg: "HS256" })
-			.setIssuedAt()
-			.setExpirationTime("7d")
-			.sign(getJwtSecretKey());
-		return new Response(
-			JSON.stringify({
-				token: legacyToken,
-				user: { _id: userId, email: emailLower, name: data.name, role: "customer" },
-				autoLoggedIn: true,
-			}),
-			{ status: 201 },
-		);
+		return new Response(JSON.stringify({ pending: true, email: emailLower }), { status: 201 });
 	} catch (err) {
 		if (err instanceof z.ZodError) {
 			return new Response(JSON.stringify({ error: err.flatten() }), { status: 400 });
