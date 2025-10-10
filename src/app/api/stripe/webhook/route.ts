@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import type { NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getDb } from "@/lib/mongodb";
+import { notifyOrderStatusChange } from "@/lib/notify-order-status";
 
 // NOTE: In the App Router we must read the raw body manually before any parsing.
 // Do NOT export a config with bodyParser: false here (that pattern is for pages router).
@@ -185,7 +186,23 @@ export async function POST(req: NextRequest) {
 				$addToSet: related.refundId,
 			};
 
-		// Find purchase by root id OR any related id already stored.
+		// Find purchase by root id OR any related id already stored. We fetch prior status to avoid duplicate notifications
+		const findFilter = {
+			_id: new ObjectId(userId),
+			$or: [
+				{ "purchases.id": rootId },
+				{ "purchases.relatedIds.sessionId": rootId },
+				{ "purchases.relatedIds.paymentIntentId": rootId },
+				{ "purchases.relatedIds.invoiceId": rootId },
+				{ "purchases.relatedIds.subscriptionId": rootId },
+				{ "purchases.relatedIds.chargeIds": rootId },
+				{ "purchases.relatedIds.refundIds": rootId },
+			],
+			"purchases.events.eventId": { $ne: event.id },
+		};
+		const existingPurchaseDoc = await usersCol.findOne(findFilter, { projection: { "purchases.$": 1 } });
+		const prevStatus = existingPurchaseDoc?.purchases?.[0]?.status as string | undefined;
+
 		const updateResult = await usersCol.updateOne(
 			{
 				_id: new ObjectId(userId),
@@ -222,6 +239,21 @@ export async function POST(req: NextRequest) {
 				{ _id: new ObjectId(userId), "purchases.id": { $ne: rootId } },
 				{ $push: { purchases: purchase } },
 			);
+			// Notify user about newly created purchase status
+			try {
+				await notifyOrderStatusChange(userId, rootId, derivedStatus);
+			} catch (err) {
+				console.error("notifyOrderStatusChange failed (webhook create)", err);
+			}
+		} else {
+			// If we updated an existing purchase, notify only when status changed
+			if (prevStatus !== undefined && prevStatus !== derivedStatus) {
+				try {
+					await notifyOrderStatusChange(userId, rootId, derivedStatus);
+				} catch (err) {
+					console.error("notifyOrderStatusChange failed (webhook update)", err);
+				}
+			}
 		}
 	} catch (e) {
 		console.error("Webhook handling error", e);
