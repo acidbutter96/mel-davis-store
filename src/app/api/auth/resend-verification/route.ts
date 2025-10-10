@@ -45,12 +45,16 @@ export async function POST(req: Request) {
 				text: `Confirm: ${verifyUrl}?token=${token}`,
 				html,
 			});
-			if (!result.sent) {
-				console.warn("Resend verification: email not sent", result.error, result.persistenceError);
+			if (!result.sent || result.persistenceError) {
+				console.warn(
+					"Resend verification: email send/persistence issue",
+					result.error,
+					result.persistenceError,
+				);
 				return new Response(
 					JSON.stringify({
 						ok: false,
-						sent: false,
+						sent: !!result.sent,
 						error: result.error,
 						persistenceError: result.persistenceError,
 					}),

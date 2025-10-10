@@ -1,5 +1,5 @@
 import "server-only";
-import type { Collection, Document } from "mongodb";
+import type { Collection, Document, ObjectId } from "mongodb";
 import { env } from "@/env.mjs";
 import { getMongoClient } from "@/lib/mongodb";
 
@@ -51,8 +51,8 @@ export async function sendEmail(opts: SendEmailOptions) {
 	}
 	try {
 		const client = await getMongoClient();
-		const commDb = client.db("communication");
-		const coll: Collection<Document> = commDb.collection("emails");
+		const commDb = client.db(env.MONGODB_DB_NAME);
+		const coll: Collection<Document> = commDb.collection("communication");
 		const sentAt = new Date();
 		const html = opts.html ?? opts.text ?? "";
 		const recipients: string[] = [];
@@ -71,20 +71,34 @@ export async function sendEmail(opts: SendEmailOptions) {
 		extract(opts.to);
 		extract(opts.cc);
 		extract(opts.bcc);
-		for (const email of recipients) {
+		// dedupe recipients
+		const unique = Array.from(new Set(recipients));
+		const insertedIds: Array<{ email: string; id?: unknown }> = [];
+		for (const email of unique) {
 			try {
-				await coll.updateOne(
-					{ email },
-					[
-						{
-							$set: {
-								lastSent: sentAt,
-								messages: { $concatArrays: [[html], { $ifNull: ["$messages", []] }] },
-							},
-						},
-					],
-					{ upsert: true },
-				);
+				const doc: Document = {
+					email,
+					emailBody: html,
+					sentAt,
+					status: "pending",
+				};
+				const res = await coll.insertOne(doc);
+				insertedIds.push({ email, id: res.insertedId });
+			} catch (err: unknown) {
+				persistenceError = err instanceof Error ? err.message : String(err);
+			}
+		}
+		for (const rec of insertedIds) {
+			try {
+				const update: Partial<Document> = {};
+				if (info?.messageId) update.messageId = info.messageId;
+				if (sendError) {
+					update.status = "failed";
+					update.error = sendError;
+				} else {
+					update.status = "sent";
+				}
+				await coll.updateOne({ _id: rec.id as unknown as ObjectId }, { $set: update });
 			} catch (err: unknown) {
 				persistenceError = err instanceof Error ? err.message : String(err);
 			}

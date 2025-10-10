@@ -142,12 +142,15 @@ export async function POST(req: Request) {
 				verifyUrl: `${verifyUrl}?token=${verifyToken}`,
 				supportEmail: env.SMTP_USER,
 			});
-			await sendEmail({
+			const sendResult = await sendEmail({
 				to: emailLower,
 				subject: "Confirm your email",
 				text: `Confirm your account: ${verifyUrl}?token=${verifyToken}`,
 				html,
 			});
+			if (!sendResult.sent || sendResult.persistenceError) {
+				console.warn("Register: email send/persistence issue", sendResult.error, sendResult.persistenceError);
+			}
 		} catch {}
 
 		return new Response(JSON.stringify({ pending: true, email: emailLower }), { status: 201 });
