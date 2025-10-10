@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNavItems } from "@/app/admin/_components/nav-config";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/ui/shadcn/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/ui/shadcn/sheet";
 
 export function AdminTopbar() {
 	const pathname = usePathname();
@@ -27,16 +27,17 @@ export function AdminTopbar() {
 							{adminNavItems.map(({ href, label }) => {
 								const active = pathname === href || (href !== "/admin" && pathname?.startsWith(href));
 								return (
-									<Link
-										key={href}
-										href={href}
-										className={cn(
-											"block rounded-md px-3 py-2 text-sm",
-											active ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground",
-										)}
-									>
-										{label}
-									</Link>
+									<SheetClose asChild key={href}>
+										<Link
+											href={href}
+											className={cn(
+												"block rounded-md px-3 py-2 text-sm",
+												active ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground",
+											)}
+										>
+											{label}
+										</Link>
+									</SheetClose>
 								);
 							})}
 						</nav>
