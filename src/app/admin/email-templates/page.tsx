@@ -63,18 +63,31 @@ export default function EmailTemplatesPage() {
 
 	return (
 		<div className="p-6">
-			<div className="mb-4 flex gap-4">
-				<select
-					value={selected}
-					onChange={(e) => setSelected(e.target.value)}
-					className="border rounded px-3 py-2"
-				>
+			<div className="mb-4">
+				<div className="flex flex-wrap gap-2 mb-3">
 					{templates.map((t) => (
-						<option key={t.id} value={t.id}>
+						<button
+							key={t.id}
+							className={`px-3 py-2 rounded ${selected === t.id ? "bg-slate-800 text-white" : "bg-slate-700 text-slate-200"}`}
+							onClick={() => setSelected(t.id)}
+						>
 							{t.label}
-						</option>
+						</button>
 					))}
-				</select>
+				</div>
+				<div>
+					<select
+						value={selected}
+						onChange={(e) => setSelected(e.target.value)}
+						className="border rounded px-3 py-2"
+					>
+						{templates.map((t) => (
+							<option key={t.id} value={t.id}>
+								{t.label}
+							</option>
+						))}
+					</select>
+				</div>
 			</div>
 			<div>
 				<iframe
