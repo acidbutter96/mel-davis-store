@@ -109,5 +109,8 @@
 	"/order.paymentStatus.requires_capture": "Erdordert Erfassung",
 	"/order.paymentStatus.requires_confirmation": "Erfordert Bestätigung",
 	"/order.paymentStatus.requires_payment_method": "Erfordert Zahlungsart",
-	"/order.paymentStatus.succeeded": "Erfolgreich"
+	"/order.paymentStatus.succeeded": "Erfolgreich",
+	"/order.fulfillmentStatus.received": "Eingegangen",
+	"/order.fulfillmentStatus.producing": "In Produktion",
+	"/order.fulfillmentStatus.shipped": "Versandt"
 }

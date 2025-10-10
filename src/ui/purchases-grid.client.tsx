@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getPurchaseDetails } from "@/actions/order-actions";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/i18n/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/shadcn/dialog";
 
 interface PurchaseSummaryItem {
@@ -39,6 +40,7 @@ interface PurchaseDetails {
 }
 
 export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
+	const t = useTranslations("/order.fulfillmentStatus");
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -184,9 +186,7 @@ export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
 														</div>
 													);
 												})}
-												{curr && (
-													<span className="ml-1 text-[10px] text-muted-foreground capitalize">{curr}</span>
-												)}
+												{curr && <span className="ml-1 text-[10px] text-muted-foreground">{t(curr)}</span>}
 											</div>
 										);
 									})()}
@@ -220,16 +220,7 @@ export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
 								</div>
 								<div className="text-xs text-muted-foreground flex flex-wrap gap-2">
 									<span>Status: {details.status}</span>
-									{details.fulfillment?.status && (
-										<span>
-											Fulfillment:{" "}
-											{details.fulfillment.status === "received"
-												? "Received"
-												: details.fulfillment.status === "producing"
-													? "Producing"
-													: "Shipped"}
-										</span>
-									)}
+									{details.fulfillment?.status && <span>Fulfillment: {t(details.fulfillment.status)}</span>}
 									{details.fulfillment?.trackingNumber && (
 										<span>Tracking: {details.fulfillment.trackingNumber}</span>
 									)}
@@ -238,9 +229,9 @@ export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
 								<div className="mt-3">
 									{(() => {
 										const steps = [
-											{ key: "received", label: "Received" },
-											{ key: "producing", label: "Producing" },
-											{ key: "shipped", label: "Shipped" },
+											{ key: "received", label: t("received") },
+											{ key: "producing", label: t("producing") },
+											{ key: "shipped", label: t("shipped") },
 										] as const;
 										const curr = details.fulfillment?.status;
 										const activeIdx = curr ? steps.findIndex((s) => s.key === curr) : -1;
