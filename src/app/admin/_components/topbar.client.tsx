@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNavItems } from "@/app/admin/_components/nav-config";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger } from "@/ui/shadcn/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/ui/shadcn/sheet";
 
 export function AdminTopbar() {
 	const pathname = usePathname();
@@ -21,6 +21,7 @@ export function AdminTopbar() {
 						<span className="sr-only">Open menu</span>
 					</SheetTrigger>
 					<SheetContent side="left" className="p-0">
+						<SheetTitle className="sr-only">Navigation menu</SheetTitle>
 						<div className="px-4 py-4 border-b font-semibold">Menu</div>
 						<nav className="p-2 space-y-1">
 							{adminNavItems.map(({ href, label }) => {

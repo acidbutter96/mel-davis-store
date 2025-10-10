@@ -81,9 +81,11 @@ export function RevenueZoomBrush({
 	);
 
 	return (
-		<div className="space-y-2">
-			<ReactApexChart options={mainOptions} series={series} type="area" height={mainHeight} />
-			<ReactApexChart options={brushOptions} series={series} type="area" height={brushHeight} />
+		<div className="space-y-2 overflow-x-auto">
+			<div className="min-w-[640px]">
+				<ReactApexChart options={mainOptions} series={series} type="area" height={mainHeight} />
+				<ReactApexChart options={brushOptions} series={series} type="area" height={brushHeight} />
+			</div>
 		</div>
 	);
 }
