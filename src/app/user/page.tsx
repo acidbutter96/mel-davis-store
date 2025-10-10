@@ -56,6 +56,7 @@ export default async function UserPage({ searchParams }: { searchParams?: Promis
 			unitAmount?: number | null;
 			priceId?: string | null;
 		}>;
+		fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 	}> | null = null;
 	if (section === "purchases") {
 		try {

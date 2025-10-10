@@ -141,6 +141,7 @@ export async function getPurchaseDetails(purchaseId: string): Promise<
 				productId: string | null;
 				image: string | null;
 			}>;
+			fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 	  }
 > {
 	if (!purchaseId) return { error: "Missing purchase id" };
@@ -163,6 +164,7 @@ export async function getPurchaseDetails(purchaseId: string): Promise<
 			amountTotal: number;
 			currency: string;
 			items?: PurchaseItemDoc[];
+			fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 		}
 		const userDoc = await db
 			.collection("users")
@@ -227,6 +229,7 @@ export async function getPurchaseDetails(purchaseId: string): Promise<
 			amountTotal: purchase.amountTotal,
 			currency: purchase.currency,
 			items: enrichedItems,
+			fulfillment: purchase.fulfillment,
 		};
 	} catch (e) {
 		console.error("[getPurchaseDetails]", e);

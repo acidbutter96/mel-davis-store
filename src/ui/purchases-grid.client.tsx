@@ -18,6 +18,7 @@ interface PurchaseSummary {
 	amountTotal: number;
 	currency: string;
 	items: PurchaseSummaryItem[];
+	fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 }
 interface PurchaseDetailsItem {
 	name: string | null;
@@ -34,6 +35,7 @@ interface PurchaseDetails {
 	amountTotal: number;
 	currency: string;
 	items: PurchaseDetailsItem[];
+	fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 }
 
 export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
@@ -160,6 +162,35 @@ export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
 										</span>
 									)}
 								</div>
+								<div className="mt-1">
+									{(() => {
+										const steps = ["received", "producing", "shipped"] as const;
+										const curr = p.fulfillment?.status;
+										const activeIdx = curr ? steps.indexOf(curr) : -1;
+										return (
+											<div className="flex items-center gap-2">
+												{steps.map((s, idx) => {
+													const done = activeIdx >= idx;
+													return (
+														<div key={s} className="flex items-center">
+															<div
+																className={`size-2 rounded-full ${done ? "bg-primary" : "bg-muted-foreground/30"}`}
+															/>
+															{idx < steps.length - 1 && (
+																<div
+																	className={`mx-1 h-[2px] w-10 ${done ? "bg-primary/60" : "bg-muted-foreground/20"}`}
+																/>
+															)}
+														</div>
+													);
+												})}
+												{curr && (
+													<span className="ml-1 text-[10px] text-muted-foreground capitalize">{curr}</span>
+												)}
+											</div>
+										);
+									})()}
+								</div>
 							</div>
 							<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-black/0 transition group-hover:ring-black/5 dark:group-hover:ring-white/5" />
 						</button>
@@ -189,7 +220,76 @@ export function PurchasesGrid({ purchases }: { purchases: PurchaseSummary[] }) {
 								</div>
 								<div className="text-xs text-muted-foreground flex flex-wrap gap-2">
 									<span>Status: {details.status}</span>
+									{details.fulfillment?.status && (
+										<span>
+											Fulfillment:{" "}
+											{details.fulfillment.status === "received"
+												? "Received"
+												: details.fulfillment.status === "producing"
+													? "Producing"
+													: "Shipped"}
+										</span>
+									)}
+									{details.fulfillment?.trackingNumber && (
+										<span>Tracking: {details.fulfillment.trackingNumber}</span>
+									)}
 									<span>{formatDate(details.createdAt)}</span>
+								</div>
+								<div className="mt-3">
+									{(() => {
+										const steps = [
+											{ key: "received", label: "Received" },
+											{ key: "producing", label: "Producing" },
+											{ key: "shipped", label: "Shipped" },
+										] as const;
+										const curr = details.fulfillment?.status;
+										const activeIdx = curr ? steps.findIndex((s) => s.key === curr) : -1;
+										const pct = activeIdx >= 0 ? (activeIdx / (steps.length - 1)) * 100 : 0;
+										return (
+											<div className="space-y-2">
+												<div className="relative h-6 w-full">
+													<div className="absolute left-0 right-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-muted-foreground/20" />
+													<div
+														className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-primary/70 transition-all"
+														style={{ width: `${pct}%` }}
+													/>
+													{steps.map((s, idx) => {
+														const leftPct = (idx / (steps.length - 1)) * 100;
+														const done = activeIdx >= idx;
+														return (
+															<div
+																key={s.key}
+																className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+																style={{ left: `${leftPct}%` }}
+															>
+																<div
+																	className={`size-4 rounded-full border ${
+																		done
+																			? "bg-primary border-primary"
+																			: "bg-background border-muted-foreground/30"
+																	}`}
+																/>
+															</div>
+														);
+													})}
+												</div>
+												<div className="relative  h-4 mx-4">
+													{steps.map((s, idx) => {
+														const leftPct = (idx / (steps.length - 1)) * 100;
+														return (
+															<div
+																key={s.key}
+																className="absolute -translate-x-1/2 text-[11px] text-muted-foreground"
+																style={{ left: `${leftPct}%` }}
+															>
+																<div className="whitespace-nowrap text-center">{s.label}</div>
+															</div>
+														);
+													})}
+												</div>
+											</div>
+										);
+									})()}
 								</div>
 							</div>
 							<div className="divide-y rounded-md border">
