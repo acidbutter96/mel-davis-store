@@ -14,13 +14,14 @@ export interface PurchaseStatusChange {
 	note?: string;
 }
 export interface PurchaseDoc {
-	id: string; // checkout session id
+	id: string;
 	createdAt: Date;
 	status: string;
 	amountTotal: number;
 	currency: string;
 	items: UserPurchaseItem[];
 	statusHistory?: PurchaseStatusChange[];
+	fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 	paymentIntentId?: string | null;
 	chargeId?: string | null;
 	refundedAmount?: number;
@@ -42,6 +43,7 @@ export interface UpsertPurchaseParams {
 	chargeId?: string | null;
 	refundedAmount?: number | null;
 	note?: string;
+	fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 }
 
 // Upsert purchase inside embedded purchases array. Appends status history each call.
@@ -58,6 +60,7 @@ export async function upsertPurchase(params: UpsertPurchaseParams) {
 		chargeId,
 		refundedAmount,
 		note,
+		fulfillment,
 	} = params;
 	const db = await getDb();
 	const usersCol = db.collection<UserDoc>("users");
@@ -71,6 +74,16 @@ export async function upsertPurchase(params: UpsertPurchaseParams) {
 				...(paymentIntentId ? { "purchases.$.paymentIntentId": paymentIntentId } : {}),
 				...(chargeId ? { "purchases.$.chargeId": chargeId } : {}),
 				...(refundedAmount != null ? { "purchases.$.refundedAmount": refundedAmount } : {}),
+				...(fulfillment
+					? {
+							"purchases.$.fulfillment": {
+								...(fulfillment.status ? { status: fulfillment.status } : {}),
+								...(fulfillment.trackingNumber !== undefined
+									? { trackingNumber: fulfillment.trackingNumber ?? null }
+									: {}),
+							},
+						}
+					: {}),
 			},
 			$push: { "purchases.$.statusHistory": historyEntry },
 		},
@@ -88,6 +101,7 @@ export async function upsertPurchase(params: UpsertPurchaseParams) {
 						currency: (currency || "usd").toLowerCase(),
 						items: items || [],
 						statusHistory: [historyEntry],
+						...(fulfillment ? { fulfillment } : {}),
 						paymentIntentId: paymentIntentId || null,
 						chargeId: chargeId || null,
 						refundedAmount: refundedAmount ?? 0,

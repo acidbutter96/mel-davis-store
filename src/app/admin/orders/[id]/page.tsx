@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/shadcn/card";
 import { StatusBadge } from "@/ui/status-badge";
+import UpdateFulfillment from "../_components/update-fulfillment.client";
 
 export default async function AdminOrderDetails({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
@@ -32,6 +33,7 @@ export default async function AdminOrderDetails({ params }: { params: Promise<{ 
 		status: string;
 		createdAt: string | Date;
 		items?: Array<{ name?: string | null; quantity: number; unitAmount?: number | null }>;
+		fulfillment?: { status?: "received" | "producing" | "shipped"; trackingNumber?: string | null };
 	};
 
 	return (
@@ -65,6 +67,13 @@ export default async function AdminOrderDetails({ params }: { params: Promise<{ 
 					</div>
 					<div>
 						<span className="text-muted-foreground">Date:</span> {new Date(p.createdAt).toLocaleString()}
+					</div>
+					<div className="pt-2">
+						<UpdateFulfillment
+							id={p.id}
+							current={p.fulfillment}
+							statuses={["received", "producing", "shipped"]}
+						/>
 					</div>
 				</CardContent>
 			</Card>
