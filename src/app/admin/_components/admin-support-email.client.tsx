@@ -53,7 +53,11 @@ export function AdminSupportEmail() {
 					placeholder="support@example.com"
 					className="flex-1 rounded border px-3 py-2 bg-background text-foreground"
 				/>
-				<button onClick={save} disabled={loading} className="rounded bg-primary px-3 py-2 text-white">
+				<button
+					onClick={save}
+					disabled={loading}
+					className="rounded bg-primary px-3 py-2 text-white dark:text-black"
+				>
 					Save
 				</button>
 			</div>
