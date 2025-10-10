@@ -24,7 +24,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 	async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setRegisterError(null);
-		const form = new FormData(e.currentTarget);
+		const formEl = e.currentTarget as HTMLFormElement;
+		const form = new FormData(formEl);
 		const rawEntries = Array.from(form.entries()) as [string, string][];
 		const base: Record<string, unknown> = {};
 		const address: Record<string, string> = {};
@@ -37,8 +38,37 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 				base[key] = value;
 			}
 		}
-
-		console.log(cart);
+		const email = String(base.email || "")
+			.trim()
+			.toLowerCase();
+		const password = String(base.password || "");
+		const name = String(base.name || "").trim();
+		if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+			setRegisterError("Enter a valid email");
+			return;
+		}
+		if (!name) {
+			setRegisterError("Enter your name");
+			return;
+		}
+		if (password.length < 6) {
+			setRegisterError("Password must be at least 6 characters");
+			return;
+		}
+		try {
+			const avail = await fetch("/api/auth/email-available", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email }),
+			});
+			if (avail.ok) {
+				const data = (await avail.json()) as { available?: boolean };
+				if (!data.available) {
+					setRegisterError("Email already registered");
+					return;
+				}
+			}
+		} catch {}
 
 		if (Object.keys(address).length > 0) base.address = address;
 
@@ -80,7 +110,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 		} else {
 			console.debug("[register] no cart items to send");
 		}
-		const payload = base;
+		const payload = { ...base, email };
 		try {
 			const res = await fetch("/api/auth/register", {
 				method: "POST",

@@ -33,6 +33,21 @@ services:
   #   ports:
   #     - "3000:3000"
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: yournextstore-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    volumes:
+      - mailpit_data:/data
+    environment:
+      - MAILPIT_SMTP_LISTEN_ADDR=0.0.0.0:1025
+      - MAILPIT_WEB_LISTEN_ADDR=0.0.0.0:8025
+
 volumes:
   mongo_data:
+    driver: local
+  mailpit_data:
     driver: local

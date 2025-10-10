@@ -1,9 +1,11 @@
 import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
+import { nanoid } from "nanoid";
 import { z } from "zod";
 import { env } from "@/env.mjs";
 import { getCartCookieItems, getCartId } from "@/lib/cart-cookies";
 import { commerce } from "@/lib/commerce-stripe";
+import { sendEmail } from "@/lib/email";
 import { ensureIndexes, getDb } from "@/lib/mongodb";
 import { createPersistentSession } from "@/lib/session";
 
@@ -117,6 +119,7 @@ export async function POST(req: Request) {
 			console.debug("[register] final mergedCartItems", mergedCartItems);
 		}
 
+		const verifyToken = nanoid(48);
 		const userDoc = {
 			email: emailLower,
 			name: data.name,
@@ -125,6 +128,8 @@ export async function POST(req: Request) {
 			passwordHash,
 			cart: mergedCartItems ? { items: mergedCartItems } : undefined,
 			role: "customer" as const,
+			verified: false,
+			verification: { token: verifyToken, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24) },
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -133,6 +138,26 @@ export async function POST(req: Request) {
 		console.debug("[register] user inserted with cart?", Boolean(userDoc.cart));
 
 		const userId = res.insertedId.toString();
+
+		const verifyUrl = new URL(
+			"/api/auth/verify",
+			process.env.NEXT_PUBLIC_URL || "http://localhost:3000",
+		).toString();
+		try {
+			const { confirmationEmailHtml } = await import("@/lib/email-templates/confirmation");
+			const html = confirmationEmailHtml({
+				name: data.name,
+				verifyUrl: `${verifyUrl}?token=${verifyToken}`,
+				supportEmail: env.SMTP_USER,
+			});
+			await sendEmail({
+				to: emailLower,
+				subject: "Confirm your email",
+				text: `Confirm your account: ${verifyUrl}?token=${verifyToken}`,
+				html,
+			});
+		} catch {}
+
 		await createPersistentSession({ id: userId, email: emailLower, name: data.name, role: "customer" });
 		const legacyToken = await new SignJWT({ sub: userId, email: emailLower })
 			.setProtectedHeader({ alg: "HS256" })

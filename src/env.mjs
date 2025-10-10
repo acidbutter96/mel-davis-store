@@ -19,6 +19,14 @@ export const env = createEnv({
 			.regex(/^mongodb(\+srv)?:\/\//, "MONGODB_URI must start with mongodb:// or mongodb+srv://"),
 		MONGODB_DB_NAME: z.string(),
 		JWT_SECRET: z.string().min(32),
+		SMTP_HOST: z.string().optional(),
+		SMTP_PORT: z
+			.string()
+			.optional()
+			.transform((v) => (v ? Number(v) : undefined)),
+		SMTP_USER: z.string().optional(),
+		SMTP_PASS: z.string().optional(),
+		SMTP_FROM: z.string().email().optional(),
 	},
 	client: {
 		NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
@@ -46,6 +54,11 @@ export const env = createEnv({
 		MONGODB_URI: process.env.MONGODB_URI,
 		MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
 		JWT_SECRET: process.env.JWT_SECRET,
+		SMTP_HOST: process.env.SMTP_HOST,
+		SMTP_PORT: process.env.SMTP_PORT,
+		SMTP_USER: process.env.SMTP_USER,
+		SMTP_PASS: process.env.SMTP_PASS,
+		SMTP_FROM: process.env.SMTP_FROM,
 	},
 });
 
