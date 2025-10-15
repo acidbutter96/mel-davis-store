@@ -53,6 +53,23 @@ export async function POST(req: NextRequest) {
 		}
 	}
 
+	// persist raw webhook receipt
+	try {
+		const db = await getDb();
+		const webhooksCol = db.collection("webhooks");
+		await webhooksCol.insertOne({
+			eventId: event.id || null,
+			type: event.type || null,
+			raw: JSON.parse(bodyBuffer.toString()),
+			headers: Object.fromEntries(req.headers.entries()),
+			verified: !!webhookSecret,
+			receivedAt: new Date(),
+			status: "pending",
+		});
+	} catch (err) {
+		console.error("Failed to persist webhook", err);
+	}
+
 	// ---- Generic handling (all events) ----
 	try {
 		const extracted = extractContext(event);
@@ -257,7 +274,29 @@ export async function POST(req: NextRequest) {
 		}
 	} catch (e) {
 		console.error("Webhook handling error", e);
+		try {
+			const db = await getDb();
+			const webhooksCol = db.collection("webhooks");
+			if (event?.id) {
+				await webhooksCol.updateOne({ eventId: event.id }, { $set: { status: "failed", error: String(e) } });
+			}
+		} catch (err) {
+			console.error("Failed to update webhook status (failed)", err);
+		}
 		return new Response("Webhook handler failed", { status: 500 });
+	}
+
+	try {
+		const db = await getDb();
+		const webhooksCol = db.collection("webhooks");
+		if (event?.id) {
+			await webhooksCol.updateOne(
+				{ eventId: event.id },
+				{ $set: { status: "processed", processedAt: new Date() } },
+			);
+		}
+	} catch (err) {
+		console.error("Failed to update webhook status (processed)", err);
 	}
 
 	return new Response("ok", { status: 200 });

@@ -31,7 +31,8 @@ export async function middleware(request: NextRequest) {
 		pathname === "/api/auth/login" ||
 		pathname === "/api/auth/register" ||
 		pathname === "/api/auth/forgot-password" ||
-		pathname === "/api/auth/reset-password";
+		pathname === "/api/auth/reset-password" ||
+		pathname === "/api/stripe/webhook";
 	const pageProtected = pathname.startsWith("/orders") || pathname.startsWith("/user");
 	const isAdmin = pathname.startsWith("/admin");
 

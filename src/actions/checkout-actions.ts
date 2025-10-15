@@ -146,6 +146,7 @@ export async function createCheckoutSession(): Promise<
 			customer_email: !stripeCustomerId ? user?.email : undefined,
 			phone_number_collection: user?.phone ? { enabled: true } : undefined,
 			metadata: { userId },
+			payment_intent_data: { metadata: { userId } },
 			success_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
 			cancel_url: `${baseUrl}/?checkout=cancel`,
 		});
