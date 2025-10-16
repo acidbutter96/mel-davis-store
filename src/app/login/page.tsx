@@ -3,11 +3,24 @@
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useTranslations } from "@/i18n/client";
 import { LoginForm } from "@/ui/login-form";
 
 export default function LoginPage() {
 	const t = useTranslations("Global.metadata");
+	const params = useSearchParams();
+	const [flash, setFlash] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (params.get("reset") === "1") {
+			setFlash("Password updated");
+			const tmo = setTimeout(() => setFlash(null), 5000);
+			return () => clearTimeout(tmo);
+		}
+		return undefined;
+	}, [params]);
 
 	return (
 		<div className="relative flex min-h-svh flex-col items-center justify-center gap-6 bg-neutral-50 p-6 md:p-10">
@@ -31,6 +44,11 @@ export default function LoginPage() {
 					{t("title")}
 				</Link>
 				<LoginForm />
+				{flash && (
+					<div className="mt-4 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
+						{flash}
+					</div>
+				)}
 			</div>
 		</div>
 	);

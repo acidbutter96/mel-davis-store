@@ -1,0 +1,82 @@
+{
+	"info": {
+		"name": "stripe-webhooks",
+		"_postman_id": "b6f2e8d8-0000-4000-8000-000000000000",
+		"description": "Collection to test Stripe webhook endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "payment_intent.succeeded",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "stripe-signature",
+						"value": "{{stripeSignature}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"id\": \"evt_test_pi_succeeded\",\n  \"object\": \"event\",\n  \"api_version\": \"2023-08-16\",\n  \"created\": 1750000000,\n  \"data\": {\n    \"object\": {\n      \"id\": \"{{paymentIntentId}}\",\n      \"object\": \"payment_intent\",\n      \"amount\": 1700,\n      \"currency\": \"usd\",\n      \"status\": \"succeeded\",\n      \"metadata\": {\n        \"userId\": \"{{userId}}\"\n      }\n    }\n  },\n  \"livemode\": false,\n  \"type\": \"payment_intent.succeeded\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/stripe/webhook",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "stripe", "webhook"]
+				}
+			}
+		},
+		{
+			"name": "checkout.session.completed",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "stripe-signature",
+						"value": "{{stripeSignature}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"id\": \"evt_test_cs_completed\",\n  \"object\": \"event\",\n  \"api_version\": \"2023-08-16\",\n  \"created\": 1750000000,\n  \"data\": {\n    \"object\": {\n      \"id\": \"{{sessionId}}\",\n      \"object\": \"checkout.session\",\n      \"amount_total\": 1700,\n      \"currency\": \"usd\",\n      \"payment_intent\": \"{{paymentIntentId}}\",\n      \"metadata\": {\n        \"userId\": \"{{userId}}\"\n      }\n    }\n  },\n  \"livemode\": false,\n  \"type\": \"checkout.session.completed\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/stripe/webhook",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "stripe", "webhook"]
+				}
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000"
+		},
+		{
+			"key": "userId",
+			"value": ""
+		},
+		{
+			"key": "paymentIntentId",
+			"value": "pi_3SGIR5DEIOBR8SYs1SPOgKYh"
+		},
+		{
+			"key": "sessionId",
+			"value": "cs_test_a1wHLvS7lG4GeQhjId3byUjuVnQj0maCGmtMz4MD7FaqMBscETZPTKFoDW"
+		},
+		{
+			"key": "stripeSignature",
+			"value": ""
+		}
+	]
+}

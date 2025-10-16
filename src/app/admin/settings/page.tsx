@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/shadcn/card";
+import AdminSupportEmail from "../_components/admin-support-email.client";
 import { AdminThemeSelector } from "./theme-selector.client";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,14 @@ export default async function AdminSettingsPage() {
 				</CardHeader>
 				<CardContent>
 					<AdminThemeSelector />
+				</CardContent>
+			</Card>
+			<Card>
+				<CardHeader>
+					<CardTitle>Support email</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<AdminSupportEmail />
 				</CardContent>
 			</Card>
 		</main>

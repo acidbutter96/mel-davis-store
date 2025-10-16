@@ -1,11 +1,11 @@
 import bcrypt from "bcryptjs";
-import { SignJWT } from "jose";
+import { nanoid } from "nanoid";
 import { z } from "zod";
 import { env } from "@/env.mjs";
 import { getCartCookieItems, getCartId } from "@/lib/cart-cookies";
 import { commerce } from "@/lib/commerce-stripe";
+import { sendEmail } from "@/lib/email";
 import { ensureIndexes, getDb } from "@/lib/mongodb";
-import { createPersistentSession } from "@/lib/session";
 
 const registerSchema = z.object({
 	email: z.string().email(),
@@ -48,10 +48,6 @@ const registerSchema = z.object({
 		)
 		.optional(),
 });
-
-function getJwtSecretKey() {
-	return new TextEncoder().encode(env.JWT_SECRET);
-}
 
 export async function POST(req: Request) {
 	try {
@@ -117,6 +113,7 @@ export async function POST(req: Request) {
 			console.debug("[register] final mergedCartItems", mergedCartItems);
 		}
 
+		const verifyToken = nanoid(48);
 		const userDoc = {
 			email: emailLower,
 			name: data.name,
@@ -125,28 +122,38 @@ export async function POST(req: Request) {
 			passwordHash,
 			cart: mergedCartItems ? { items: mergedCartItems } : undefined,
 			role: "customer" as const,
+			verified: false,
+			verification: { token: verifyToken, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24) },
 			createdAt: now,
 			updatedAt: now,
 		};
 
-		const res = await db.collection("users").insertOne(userDoc);
+		await db.collection("users").insertOne(userDoc);
 		console.debug("[register] user inserted with cart?", Boolean(userDoc.cart));
 
-		const userId = res.insertedId.toString();
-		await createPersistentSession({ id: userId, email: emailLower, name: data.name, role: "customer" });
-		const legacyToken = await new SignJWT({ sub: userId, email: emailLower })
-			.setProtectedHeader({ alg: "HS256" })
-			.setIssuedAt()
-			.setExpirationTime("7d")
-			.sign(getJwtSecretKey());
-		return new Response(
-			JSON.stringify({
-				token: legacyToken,
-				user: { _id: userId, email: emailLower, name: data.name, role: "customer" },
-				autoLoggedIn: true,
-			}),
-			{ status: 201 },
-		);
+		const verifyUrl = new URL(
+			"/api/auth/verify",
+			process.env.NEXT_PUBLIC_URL || "http://localhost:3000",
+		).toString();
+		try {
+			const { confirmationEmailHtml } = await import("@/lib/email-templates/confirmation");
+			const html = confirmationEmailHtml({
+				name: data.name,
+				verifyUrl: `${verifyUrl}?token=${verifyToken}`,
+				supportEmail: env.SMTP_USER,
+			});
+			const sendResult = await sendEmail({
+				to: emailLower,
+				subject: "Confirm your email",
+				text: `Confirm your account: ${verifyUrl}?token=${verifyToken}`,
+				html,
+			});
+			if (!sendResult.sent || sendResult.persistenceError) {
+				console.warn("Register: email send/persistence issue", sendResult.error, sendResult.persistenceError);
+			}
+		} catch {}
+
+		return new Response(JSON.stringify({ pending: true, email: emailLower }), { status: 201 });
 	} catch (err) {
 		if (err instanceof z.ZodError) {
 			return new Response(JSON.stringify({ error: err.flatten() }), { status: 400 });

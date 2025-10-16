@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getDb } from "@/lib/mongodb";
+import { notifyOrderStatusChange } from "@/lib/notify-order-status";
 
 type FulfillmentStatus = "received" | "producing" | "shipped";
 const ORDER: FulfillmentStatus[] = ["received", "producing", "shipped"];
@@ -46,7 +47,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 	const set: Record<string, unknown> = {};
 	if (nextStatus) set["purchases.$.fulfillment.status"] = nextStatus;
 	if (trackingNumber !== undefined) set["purchases.$.fulfillment.trackingNumber"] = trackingNumber ?? null;
-	await users.updateOne({ "purchases.id": id }, { $set: set });
+	const res = await users.updateOne({ "purchases.id": id }, { $set: set });
+	// Notify user about fulfillment status change if update applied and the status actually changed
+	if (res.modifiedCount && res.modifiedCount > 0) {
+		try {
+			// Only notify if nextStatus is provided and differs from the current
+			if (nextStatus && nextStatus !== current) {
+				// find the user id for this purchase
+				const foundUser = await users.findOne({ "purchases.id": id }, { projection: { _id: 1 } });
+				if (foundUser?._id) {
+					await notifyOrderStatusChange(String(foundUser._id), id, nextStatus);
+				}
+			}
+		} catch (err) {
+			console.error("notifyOrderStatusChange failed (admin fulfillment)", err);
+		}
+	}
 
 	return Response.json({ ok: true });
 }

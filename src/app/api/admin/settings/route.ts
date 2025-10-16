@@ -9,6 +9,7 @@ type SettingsDoc = {
 	current: {
 		theme?: "light" | "dark";
 		// add other settings here as they grow
+		supportEmail?: string | null;
 	};
 	history: Array<HistoryEntry>;
 };

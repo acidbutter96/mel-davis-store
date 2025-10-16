@@ -130,6 +130,9 @@ export async function ensureIndexes() {
 	if (indexesEnsured) return;
 	const db = await getDb();
 	await db.collection("users").createIndex({ email: 1 }, { unique: true });
+	try {
+		await db.collection("users").createIndex({ "verification.token": 1 }, { sparse: true });
+	} catch {}
 	const sessions = db.collection("sessions");
 	try {
 		await sessions.createIndex({ userId: 1, jwt: 1 });
@@ -184,6 +187,8 @@ export interface UserDoc {
 		paymentIntentId?: string | null;
 		cart?: UserCart | null;
 	}>;
+	verified?: boolean;
+	verification?: { token: string; expiresAt: Date } | null;
 	createdAt: Date;
 	updatedAt: Date;
 }
